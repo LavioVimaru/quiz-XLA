@@ -1,0 +1,1631 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Ôn Thi Trắc Nghiệm - Xử Lý Ảnh Số</title>
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* CSS variables for Design Tokens */
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f172a, #1e1b4b);
+            --bg-color: #0b0f19;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-primary: #6366f1;
+            --accent-secondary: #8b5cf6;
+            --accent-hover: #4f46e5;
+            --accent-glow: rgba(99, 102, 241, 0.3);
+            --correct-color: #10b981;
+            --correct-bg: rgba(16, 185, 129, 0.15);
+            --correct-border: rgba(16, 185, 129, 0.4);
+            --incorrect-color: #f43f5e;
+            --incorrect-bg: rgba(244, 63, 94, 0.15);
+            --incorrect-border: rgba(244, 63, 94, 0.4);
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.15);
+            --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.3);
+            --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.4);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --font-sans: 'Bahnschrift', 'Segoe UI', sans-serif;
+            --font-header: 'Bahnschrift', 'Segoe UI', sans-serif;
+        }
+
+        .light-mode {
+            --bg-gradient: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+            --bg-color: #f8fafc;
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --card-border: rgba(0, 0, 0, 0.06);
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --accent-primary: #4f46e5;
+            --accent-secondary: #7c3aed;
+            --accent-hover: #3730a3;
+            --accent-glow: rgba(79, 70, 229, 0.15);
+            --correct-color: #059669;
+            --correct-bg: rgba(5, 150, 105, 0.1);
+            --correct-border: rgba(5, 150, 105, 0.3);
+            --incorrect-color: #d97706; /* customized theme accent */
+            --incorrect-color: #e11d48;
+            --incorrect-bg: rgba(225, 29, 72, 0.1);
+            --incorrect-border: rgba(225, 29, 72, 0.3);
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 8px 24px rgba(149, 157, 165, 0.15);
+            --shadow-lg: 0 16px 32px rgba(149, 157, 165, 0.2);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--bg-color);
+            background-image: var(--bg-gradient);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: var(--transition);
+            line-height: 1.6;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Glassmorphic Navbar */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 32px;
+            transition: var(--transition);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-family: var(--font-header);
+            font-weight: 700;
+            font-size: 20px;
+            background: linear-gradient(90deg, #6366f1, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo i {
+            font-size: 24px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .theme-btn {
+            background: var(--card-border);
+            border: 1px solid var(--card-border);
+            color: var(--text-primary);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .theme-btn:hover {
+            transform: scale(1.1);
+            background: var(--accent-glow);
+            border-color: var(--accent-primary);
+        }
+
+        /* App views */
+        .view {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .view.active {
+            display: block;
+            opacity: 1;
+        }
+
+        /* Landing Page View */
+        .landing-header {
+            text-align: center;
+            margin-bottom: 40px;
+            animation: fadeInDown 0.6s ease;
+        }
+
+        .landing-header h1 {
+            font-family: var(--font-header);
+            font-size: 36px;
+            font-weight: 800;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, var(--text-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .landing-header p {
+            color: var(--text-secondary);
+            font-size: 16px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .sets-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 24px;
+            margin-bottom: 48px;
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .set-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 24px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .set-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .set-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(99, 102, 241, 0.4);
+            box-shadow: var(--shadow-md);
+        }
+
+        .set-card:hover::before {
+            opacity: 1;
+        }
+
+        .set-title {
+            font-family: var(--font-header);
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .set-range {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .set-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            color: var(--text-secondary);
+            border-top: 1px solid var(--card-border);
+            padding-top: 16px;
+            margin-top: 8px;
+        }
+
+        .highscore-badge {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--correct-color);
+            padding: 4px 10px;
+            border-radius: 20px;
+            border: 1px solid var(--correct-border);
+            font-weight: 500;
+        }
+
+        .set-icon {
+            position: absolute;
+            right: 16px;
+            top: 16px;
+            font-size: 36px;
+            opacity: 0.1;
+            color: var(--accent-primary);
+            transition: var(--transition);
+        }
+
+        .set-card:hover .set-icon {
+            opacity: 0.25;
+            transform: scale(1.1);
+        }
+
+        .special-grid {
+            grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+        }
+
+        /* Quiz Active View */
+        .quiz-container {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 32px;
+            align-items: start;
+        }
+
+        @media (max-width: 900px) {
+            .quiz-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .main-quiz-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 32px;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: var(--shadow-lg);
+            position: relative;
+        }
+
+        .quiz-navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 15px;
+            transition: var(--transition);
+        }
+
+        .back-btn:hover {
+            color: var(--accent-primary);
+            transform: translateX(-4px);
+        }
+
+        .timer-badge {
+            background: var(--card-border);
+            padding: 6px 14px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: var(--font-header);
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .progress-container {
+            margin-bottom: 24px;
+        }
+
+        .progress-bar-bg {
+            height: 8px;
+            background: var(--card-border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            width: 0%;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .question-section {
+            margin-bottom: 32px;
+        }
+
+        .question-header {
+            font-size: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--accent-primary);
+            font-weight: 700;
+            margin-bottom: 12px;
+            font-family: var(--font-header);
+        }
+
+        .question-text {
+            font-size: 20px;
+            font-weight: 600;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .question-image-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 24px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 16px;
+            border: 1px solid var(--card-border);
+        }
+
+        .question-image-container img {
+            max-width: 100%;
+            max-height: 400px;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .option-card {
+            background: rgba(15, 23, 42, 0.3);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 16px 20px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            position: relative;
+        }
+
+        .light-mode .option-card {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        .option-card:hover {
+            border-color: rgba(99, 102, 241, 0.5);
+            background: rgba(99, 102, 241, 0.05);
+            transform: translateX(4px);
+        }
+
+        .option-prefix {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--card-border);
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            flex-shrink: 0;
+            transition: var(--transition);
+        }
+
+        .option-card:hover .option-prefix {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        .option-content {
+            font-size: 16px;
+            flex: 1;
+            font-weight: 500;
+        }
+
+        .option-image {
+            max-width: 100%;
+            max-height: 120px;
+            margin-top: 8px;
+            border-radius: 6px;
+            display: block;
+        }
+
+        .option-status-icon {
+            font-size: 18px;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: var(--transition);
+            position: absolute;
+            right: 20px;
+        }
+
+        /* Status classes for real-time grading */
+        .option-card.correct {
+            background: var(--correct-bg) !important;
+            border-color: var(--correct-border) !important;
+            color: var(--correct-color) !important;
+        }
+
+        .option-card.correct .option-prefix {
+            background: var(--correct-color) !important;
+            color: white !important;
+        }
+
+        .option-card.correct .option-status-icon {
+            opacity: 1;
+            transform: scale(1);
+            color: var(--correct-color);
+        }
+
+        .option-card.incorrect {
+            background: var(--incorrect-bg) !important;
+            border-color: var(--incorrect-border) !important;
+            color: var(--incorrect-color) !important;
+        }
+
+        .option-card.incorrect .option-prefix {
+            background: var(--incorrect-color) !important;
+            color: white !important;
+        }
+
+        .option-card.incorrect .option-status-icon {
+            opacity: 1;
+            transform: scale(1);
+            color: var(--incorrect-color);
+        }
+
+        .option-card.disabled {
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        .option-card.correct.disabled, .option-card.incorrect.disabled {
+            opacity: 1; /* Keep answer visible */
+        }
+
+        /* Navigation Buttons */
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 32px;
+            gap: 16px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: none;
+            font-family: var(--font-header);
+        }
+
+        .btn-outline {
+            background: none;
+            border: 1.5px solid var(--card-border);
+            color: var(--text-primary);
+        }
+
+        .btn-outline:hover {
+            border-color: var(--accent-primary);
+            background: var(--accent-glow);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+            box-shadow: 0 4px 14px var(--accent-glow);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px var(--accent-glow);
+        }
+
+        .btn-primary:disabled {
+            background: var(--card-border);
+            color: var(--text-secondary);
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        /* Sidebar - Question Navigator */
+        .quiz-sidebar {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 24px;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: var(--shadow-md);
+            position: sticky;
+            top: 24px;
+        }
+
+        .sidebar-title {
+            font-family: var(--font-header);
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .grid-navigator {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            max-height: 380px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .nav-num {
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 8px;
+            border: 1px solid var(--card-border);
+            background: rgba(15, 23, 42, 0.2);
+            color: var(--text-primary);
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .nav-num:hover {
+            border-color: var(--accent-primary);
+            background: var(--accent-glow);
+        }
+
+        .nav-num.active {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 8px var(--accent-glow);
+            font-weight: 700;
+            background: rgba(99, 102, 241, 0.15);
+        }
+
+        .nav-num.answered-correct {
+            background: var(--correct-bg) !important;
+            border-color: var(--correct-border) !important;
+            color: var(--correct-color) !important;
+        }
+
+        .nav-num.answered-incorrect {
+            background: var(--incorrect-bg) !important;
+            border-color: var(--incorrect-border) !important;
+            color: var(--incorrect-color) !important;
+        }
+
+        .legend {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 20px;
+            border-top: 1px solid var(--card-border);
+            padding-top: 16px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+
+        /* Results view */
+        .results-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 28px;
+            padding: 48px;
+            text-align: center;
+            max-width: 700px;
+            margin: 0 auto;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: var(--shadow-lg);
+            animation: scaleUp 0.5s ease;
+        }
+
+        .result-title {
+            font-family: var(--font-header);
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 24px;
+            color: var(--text-primary);
+        }
+
+        /* Radial Progress Chart */
+        .circle-progress-container {
+            position: relative;
+            width: 160px;
+            height: 160px;
+            margin: 0 auto 32px;
+        }
+
+        .circle-svg {
+            transform: rotate(-90deg);
+            width: 100%;
+            height: 100%;
+        }
+
+        .circle-bg {
+            fill: none;
+            stroke: var(--card-border);
+            stroke-width: 12;
+        }
+
+        .circle-bar {
+            fill: none;
+            stroke: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            stroke-width: 12;
+            stroke-dasharray: 440; /* 2 * pi * r (r=70) */
+            stroke-dashoffset: 440;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1s ease-out;
+        }
+
+        .circle-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: var(--font-header);
+            font-size: 36px;
+            font-weight: 800;
+        }
+
+        .results-stats-row {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+
+        .stat-box {
+            background: rgba(15, 23, 42, 0.2);
+            border: 1px solid var(--card-border);
+            padding: 16px 24px;
+            border-radius: 16px;
+            min-width: 130px;
+        }
+
+        .stat-val {
+            font-family: var(--font-header);
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .stat-lbl {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .feedback-msg {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 32px;
+            color: var(--accent-secondary);
+        }
+
+        .result-actions {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 40px;
+        }
+
+        /* Review Section */
+        .review-section {
+            text-align: left;
+            margin-top: 48px;
+            border-top: 1px solid var(--card-border);
+            padding-top: 32px;
+        }
+
+        .review-title {
+            font-family: var(--font-header);
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 24px;
+        }
+
+        .review-q-card {
+            background: rgba(15, 23, 42, 0.15);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        .review-q-header {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 16px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .review-opt-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .review-opt {
+            padding: 10px 16px;
+            border-radius: 10px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border: 1px solid transparent;
+        }
+
+        /* Animations */
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes scaleUp {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* Scrollbar styles */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--card-border);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-primary);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Persistent Navbar -->
+        <header>
+            <div class="logo">
+                <i class="fa-solid fa-graduation-cap"></i>
+                <span>ÔN TẬP XLA</span>
+            </div>
+            <button class="theme-btn" id="theme-toggle" aria-label="Toggle Theme">
+                <i class="fa-solid fa-moon"></i>
+            </button>
+        </header>
+
+        <!-- LANDING VIEW -->
+        <main id="view-landing" class="view active">
+            <div class="landing-header">
+                <h1>Hệ Thống Trắc Nghiệm Xử Lý Ảnh</h1>
+                <p>Ứng dụng ôn luyện kiến thức Xử Lý Ảnh Số. Hãy lựa chọn bộ đề bên dưới để kiểm tra năng lực của bạn.</p>
+            </div>
+
+            <!-- Quiz Sets Grid -->
+            <div class="sets-grid" id="sets-grid-container">
+                <!-- Javascript will populate this -->
+            </div>
+
+            <div class="landing-header">
+                <h2>Chế Độ Đặc Biệt</h2>
+            </div>
+
+            <div class="sets-grid special-grid" id="special-grid-container">
+                <!-- Special Modes -->
+                <div class="set-card" onclick="startQuiz('random')">
+                    <div>
+                        <div class="set-title" style="background: linear-gradient(90deg, #ec4899, #f43f5e); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Luyện Tập Ngẫu Nhiên</div>
+                        <div class="set-range"><i class="fa-solid fa-shuffle"></i> Trộn câu hỏi bất kỳ</div>
+                        <div style="font-size: 14px; margin-bottom: 16px;">Hệ thống sẽ tự động chọn ngẫu nhiên 50 câu trong tổng số 282 câu và xáo trộn vị trí các đáp án.</div>
+                    </div>
+                    <div class="set-stats">
+                        <span>50 Câu Hỏi</span>
+                        <span class="highscore-badge" id="hs-random">Điểm cao: --</span>
+                    </div>
+                    <i class="fa-solid fa-shuffle set-icon" style="color: #ec4899"></i>
+                </div>
+
+                <div class="set-card" onclick="startQuiz('all')">
+                    <div>
+                        <div class="set-title" style="background: linear-gradient(90deg, #10b981, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Thử Thách Toàn Bộ</div>
+                        <div class="set-range"><i class="fa-solid fa-fire"></i> Trải nghiệm đầy đủ 282 câu</div>
+                        <div style="font-size: 14px; margin-bottom: 16px;">Vượt qua bài test với toàn bộ 282 câu hỏi để kiểm tra kiến thức toàn diện của bạn.</div>
+                    </div>
+                    <div class="set-stats">
+                        <span>282 Câu Hỏi</span>
+                        <span class="highscore-badge" id="hs-all">Điểm cao: --</span>
+                    </div>
+                    <i class="fa-solid fa-fire set-icon" style="color: #10b981"></i>
+                </div>
+            </div>
+        </main>
+
+        <!-- QUIZ ACTIVE VIEW -->
+        <main id="view-quiz" class="view">
+            <div class="quiz-container">
+                <!-- Main Question Area -->
+                <div class="main-quiz-card">
+                    <div class="quiz-navbar">
+                        <button class="back-btn" onclick="confirmExit()">
+                            <i class="fa-solid fa-arrow-left"></i>
+                            <span>Thoát về Trang chủ</span>
+                        </button>
+                        <div class="timer-badge" id="timer-display">
+                            <i class="fa-solid fa-clock"></i>
+                            <span>00:00</span>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="progress-container">
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" id="progress-bar"></div>
+                        </div>
+                        <div class="progress-text">
+                            <span id="quiz-progress-text">Câu 1/50</span>
+                            <span id="score-counter">Đúng: 0 | Sai: 0</span>
+                        </div>
+                    </div>
+
+                    <!-- Question Block -->
+                    <div class="question-section">
+                        <div class="question-header" id="question-header">Câu hỏi 1</div>
+                        <div class="question-text" id="question-text">Đang tải câu hỏi...</div>
+                        
+                        <!-- Question Image -->
+                        <div class="question-image-container" id="q-image-box" style="display: none;">
+                            <img id="question-image" src="" alt="Question Image">
+                        </div>
+                    </div>
+
+                    <!-- Options List -->
+                    <div class="options-list" id="options-container">
+                        <!-- Options will be dynamic -->
+                    </div>
+
+                    <!-- Navigation Footer -->
+                    <div class="nav-buttons">
+                        <button class="btn btn-outline" id="prev-btn" onclick="prevQuestion()">
+                            <i class="fa-solid fa-chevron-left"></i> Câu trước
+                        </button>
+                        <button class="btn btn-primary" id="next-btn" onclick="nextQuestion()">
+                            Câu tiếp theo <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                        <button class="btn btn-primary" id="submit-early-btn" onclick="finishQuiz()" style="display: none; background: linear-gradient(135deg, #10b981, #059669);">
+                            Nộp bài <i class="fa-solid fa-square-check"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sidebar Grid Navigator -->
+                <div class="quiz-sidebar">
+                    <div class="sidebar-title">
+                        <span>Danh Sách Câu</span>
+                        <span id="sidebar-counter" style="font-size: 14px; font-weight: 500; color: var(--text-secondary);">0/50</span>
+                    </div>
+                    <div class="grid-navigator" id="grid-navigator">
+                        <!-- Numbers will be populated dynamically -->
+                    </div>
+                    <div class="legend">
+                        <div class="legend-item">
+                            <div class="legend-dot" style="background: rgba(15, 23, 42, 0.2); border: 1px solid var(--card-border);"></div>
+                            <span>Chưa làm</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-dot" style="background: var(--correct-bg); border: 1px solid var(--correct-border);"></div>
+                            <span>Trả lời Đúng</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-dot" style="background: var(--incorrect-bg); border: 1px solid var(--incorrect-border);"></div>
+                            <span>Trả lời Sai</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- RESULTS VIEW -->
+        <main id="view-results" class="view">
+            <div class="results-card">
+                <div class="result-title" id="result-headline">Kết Quả Bài Test</div>
+                
+                <!-- SVG Radial Progress -->
+                <div class="circle-progress-container">
+                    <svg class="circle-svg">
+                        <defs>
+                            <linearGradient id="gradientColor" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="var(--accent-primary)" />
+                                <stop offset="100%" stop-color="var(--accent-secondary)" />
+                            </linearGradient>
+                        </defs>
+                        <circle class="circle-bg" cx="80" cy="80" r="70" />
+                        <circle class="circle-bar" id="result-circle-fill" cx="80" cy="80" r="70" />
+                    </svg>
+                    <div class="circle-text" id="accuracy-percent">84%</div>
+                </div>
+
+                <div class="feedback-msg" id="feedback-msg">Tuyệt vời! Bạn đã vượt qua bài test.</div>
+
+                <div class="results-stats-row">
+                    <div class="stat-box">
+                        <div class="stat-val" id="stat-score" style="color: var(--accent-primary);">42/50</div>
+                        <div class="stat-lbl">Số câu đúng</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-val" id="stat-time" style="color: var(--accent-secondary);">12:34</div>
+                        <div class="stat-lbl">Thời gian làm</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-val" id="stat-status" style="color: var(--correct-color);">ĐẠT</div>
+                        <div class="stat-lbl">Xếp Loại</div>
+                    </div>
+                </div>
+
+                <div class="result-actions">
+                    <button class="btn btn-primary" onclick="restartQuiz()">
+                        <i class="fa-solid fa-rotate-right"></i> Làm lại bộ này
+                    </button>
+                    <button class="btn btn-outline" onclick="goToHome()">
+                        <i class="fa-solid fa-house"></i> Về Trang chủ
+                    </button>
+                </div>
+
+                <!-- Review details list -->
+                <div class="review-section">
+                    <div class="review-title"><i class="fa-solid fa-list-check"></i> Xem lại câu trả lời</div>
+                    <div id="review-list-container">
+                        <!-- Questions review will go here -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Inject data from Python script
+        const QUESTIONS_DATA = [{"question_num": 1, "question": "Câu hỏi 1: Đâu không phải là một phương pháp nội suy láng giềng gần nhất", "images": [], "options": [{"text": "Đạo hàm", "is_correct": true, "images": []}, {"text": "Song tuyến tính", "is_correct": false, "images": []}, {"text": "Song lập phương", "is_correct": false, "images": []}, {"text": "Phản hồi", "is_correct": false, "images": []}]}, {"question_num": 2, "question": "Câu hỏi 2: Ảnh tối là ảnh:", "images": [], "options": [{"text": "Độ tương phản cao và các mức xám gần với 0", "is_correct": false, "images": []}, {"text": "Độ tương phản thấp và các mức xám gần với 255", "is_correct": false, "images": []}, {"text": "Độ tương phản cao và các mức xám gần với 255", "is_correct": false, "images": []}, {"text": "Độ tương phản thấp và các mức xám gần với 0", "is_correct": true, "images": []}]}, {"question_num": 3, "question": "Câu hỏi 3: Nội suy ảnh cho phép:", "images": [], "options": [{"text": "Tính các giá trị khi nén ảnh.", "is_correct": false, "images": []}, {"text": "Tính các giá trị màu sắc của các vị trí mới dựa trên các giá trị đã biết có liên quan.", "is_correct": true, "images": []}, {"text": "Suy ra các ảnh mới giống ảnh cũ nhất.", "is_correct": false, "images": []}, {"text": "Tính các giá trị khi phóng to ảnh.", "is_correct": false, "images": []}]}, {"question_num": 4, "question": "Câu hỏi 4: Thao tác nào sẽ giúp phân biệt vùng đối tượng cần quan tâm với các vùng khác trong ảnh:", "images": [], "options": [{"text": "cân bằng sáng", "is_correct": false, "images": []}, {"text": "lấy ảnh âm bản", "is_correct": false, "images": []}, {"text": "cân bằng histogram", "is_correct": false, "images": []}, {"text": "tách ngưỡng", "is_correct": true, "images": []}]}, {"question_num": 5, "question": "Câu hỏi 5: Cho ảnh số kích thước 3x3: [10 8 1; 13 7 5; 2 8 13], độ tương phản của ảnh là:", "images": [], "options": [{"text": "12", "is_correct": true, "images": []}, {"text": "0", "is_correct": false, "images": []}, {"text": "13", "is_correct": false, "images": []}, {"text": "1", "is_correct": false, "images": []}]}, {"question_num": 6, "question": "Câu hỏi 6: Thành phần nào có thể không thấy được 1 cách tường minh trong các chương trình xử lý ảnh?", "images": [], "options": [{"text": "Thiết bị lưu trữ", "is_correct": false, "images": []}, {"text": "Thiết bị xử lý", "is_correct": false, "images": []}, {"text": "Thu nhận ảnh", "is_correct": true, "images": []}, {"text": "Thiết bị xuất/in ấn kết quả", "is_correct": false, "images": []}]}, {"question_num": 7, "question": "Câu hỏi 7: Một hệ màu gồm có mấy thành phần cơ bản", "images": [], "options": [{"text": "2", "is_correct": false, "images": []}, {"text": "3", "is_correct": true, "images": []}, {"text": "5", "is_correct": false, "images": []}, {"text": "4", "is_correct": false, "images": []}]}, {"question_num": 8, "question": "Câu hỏi 8: Lọc trung vị không có tính chất nào:", "images": [], "options": [{"text": "Làm mịn ảnh.", "is_correct": false, "images": []}, {"text": "Loại bỏ nhiễu muối tiêu", "is_correct": false, "images": []}, {"text": "Loại bỏ nhiễu định kỳ.", "is_correct": true, "images": []}, {"text": "Chậm.", "is_correct": false, "images": []}]}, {"question_num": 9, "question": "Câu hỏi 9: Phép lọc ảnh quan trọng và phổ biến nhất trong miền không gian là:", "images": [], "options": [{"text": "Lọc Gaussian.", "is_correct": true, "images": []}, {"text": "Lọc trung vị.", "is_correct": false, "images": []}, {"text": "Lọc trung bình.", "is_correct": false, "images": []}, {"text": "Cần bằng histogram.", "is_correct": false, "images": []}]}, {"question_num": 10, "question": "Câu hỏi 10: Phép lọc trung vị có đặc điểm nổi bật nhất là:", "images": [], "options": [{"text": "Khả năng làm mịn tốt", "is_correct": false, "images": []}, {"text": "Hiệu quả với nhiễu muối tiêu.", "is_correct": true, "images": []}, {"text": "Tạo ra các giá trị điểm ảnh thật.", "is_correct": false, "images": []}, {"text": "Chậm", "is_correct": false, "images": []}]}, {"question_num": 11, "question": "Câu hỏi 11: Tại sao các bức ảnh thường có các độ phân giải là 800x600, 900x600 hay 1240x800?", "images": [], "options": [{"text": "Vì tiện cho việc sản xuất", "is_correct": false, "images": []}, {"text": "Vì theo các số đo đã có từ trước", "is_correct": false, "images": []}, {"text": "Vì tiết kiệm chi phí sản xuất.", "is_correct": false, "images": []}, {"text": "Vì khi đó tỉ lệ chiều ngang chia chiều dọc sẽ cho cảm nhận thẩm mỹ tốt nhất.", "is_correct": true, "images": []}]}, {"question_num": 12, "question": "Câu hỏi 12: Histogram của ảnh cho biết:", "images": [], "options": [{"text": "Tính chất của ảnh", "is_correct": false, "images": []}, {"text": "Độ sáng của ảnh", "is_correct": false, "images": []}, {"text": "Phân bố (toàn cục) các màu sắc của ảnh", "is_correct": true, "images": []}, {"text": "Các nhiễu của ảnh", "is_correct": false, "images": []}]}, {"question_num": 13, "question": "Câu hỏi 13: Cho ảnh số kích thước 3x3: [0 4 5; 9 8 15; 10 2 13], độ tương phản của ảnh là:", "images": [], "options": [{"text": "13", "is_correct": false, "images": []}, {"text": "15", "is_correct": true, "images": []}, {"text": "1", "is_correct": false, "images": []}, {"text": "2", "is_correct": false, "images": []}]}, {"question_num": 14, "question": "Câu hỏi 14: Mục tiêu chính của lọc ảnh nói chung là:", "images": [], "options": [{"text": "Lọc nhiễu.", "is_correct": true, "images": []}, {"text": "Làm giảm các chi tiết thừa.", "is_correct": false, "images": []}, {"text": "Làm ảnh đẹp hơn.", "is_correct": false, "images": []}, {"text": "Giảm kích thước ảnh.", "is_correct": false, "images": []}]}, {"question_num": 15, "question": "Câu hỏi 15: Thư viện xử lý ảnh OpenCV sẽ coi 1 ảnh số là:", "images": [], "options": [{"text": "Một mảng", "is_correct": false, "images": []}, {"text": "Một ma trận", "is_correct": true, "images": []}, {"text": "Một cấu trúc cây tối ưu", "is_correct": false, "images": []}, {"text": "Một cấu trúc rời rạc", "is_correct": false, "images": []}]}, {"question_num": 16, "question": "Câu hỏi 16: Một chương trình xử lý ảnh viết bằng ngôn ngữ nào sẽ chạy nhanh nhất?", "images": [], "options": [{"text": "Python", "is_correct": false, "images": []}, {"text": "JavaScript", "is_correct": false, "images": []}, {"text": "C", "is_correct": false, "images": []}, {"text": "C++", "is_correct": true, "images": []}]}, {"question_num": 17, "question": "Câu hỏi 17: Tăng cường độ tương phản của ảnh là thao tác:", "images": [], "options": [{"text": "Loại bỏ các chi tiết khó quan sát.", "is_correct": false, "images": []}, {"text": "Ánh xạ vùng giá trị hẹp của các điểm ảnh vào vùng giá trị chuẩn.", "is_correct": true, "images": []}, {"text": "Điều chỉnh các giá trị cực đại của ảnh.", "is_correct": false, "images": []}, {"text": "Thay đổi các màu sắc của ảnh cho dễ nhìn hơn.", "is_correct": false, "images": []}]}, {"question_num": 18, "question": "Câu hỏi 18: Quan hệ láng giềng đề cập tới:", "images": [], "options": [{"text": "Các vùng ảnh có liên quan về màu sắc.", "is_correct": false, "images": []}, {"text": "Các điểm ảnh ở gần nhau.", "is_correct": false, "images": []}, {"text": "Các điểm ảnh xung quanh 1 vị trí điểm ảnh cụ thể.", "is_correct": true, "images": []}, {"text": "Các vùng trong ảnh", "is_correct": false, "images": []}]}, {"question_num": 19, "question": "Câu hỏi 19: Cho lân cận ảnh số kích thước 3x3: [0 4 5; 9 8 15; 10 2 13], phần tử trung vị của lân cận là:", "images": [], "options": [{"text": "9", "is_correct": false, "images": []}, {"text": "10", "is_correct": false, "images": []}, {"text": "5", "is_correct": false, "images": []}, {"text": "8", "is_correct": true, "images": []}]}, {"question_num": 20, "question": "Câu hỏi 20: Ảnh xám có thể biểu diễn bao nhiêu màu khác nhau?", "images": [], "options": [{"text": "16", "is_correct": false, "images": []}, {"text": "16777216", "is_correct": false, "images": []}, {"text": "256", "is_correct": true, "images": []}, {"text": "2", "is_correct": false, "images": []}]}, {"question_num": 21, "question": "Câu hỏi 21: Đâu không phải là định dạng ảnh phổ biến để xử lý", "images": [], "options": [{"text": "JPEG Sai", "is_correct": false, "images": []}, {"text": "GIF", "is_correct": true, "images": []}, {"text": "BMP", "is_correct": false, "images": []}, {"text": "PNG", "is_correct": false, "images": []}]}, {"question_num": 22, "question": "Câu hỏi 22: Phép lọc làm sắc nét ảnh sẽ sử dụng các nhân lọc:", "images": [], "options": [{"text": "Có kích thước là một ma trận vuông", "is_correct": false, "images": []}, {"text": "Tổng các trọng số bằng 1.", "is_correct": false, "images": []}, {"text": "Có các trọng số âm.", "is_correct": true, "images": []}, {"text": "Các trọng số phân bố theo hàm quy luật.", "is_correct": false, "images": []}]}, {"question_num": 23, "question": "Câu hỏi 23: Đâu không phải là một cơ chế bù điểm ảnh trong nhân chập:", "images": [], "options": [{"text": "Valid", "is_correct": false, "images": []}, {"text": "Giữ nguyên kích thước.", "is_correct": false, "images": []}, {"text": "Đối xứng.", "is_correct": true, "images": []}, {"text": "Full", "is_correct": false, "images": []}]}, {"question_num": 24, "question": "Câu hỏi 24: Lọc ảnh trong miền không gian là:", "images": [], "options": [{"text": "Thực hiện một hàm tính toán để đưa ra ảnh mới.", "is_correct": false, "images": []}, {"text": "Nội suy các giá trị của ảnh.", "is_correct": false, "images": []}, {"text": "Áp dụng một thao tác trong một miền lân cận tại tất cả các điểm ảnh.", "is_correct": true, "images": []}, {"text": "Thực hiện nhân chập.", "is_correct": false, "images": []}]}, {"question_num": 25, "question": "Câu hỏi 25: Nhân chập là:", "images": [], "options": [{"text": "Thực hiện nhân điểm – điểm giữa một nhân với 1 ảnh số.", "is_correct": false, "images": []}, {"text": "Thao tác lấy tổng các phép nhân giữa các hệ số của một ma trận gọi là nhân với các điểm ảnh được bao bởi nhân đó.", "is_correct": true, "images": []}, {"text": "Phép nhân như nhân 2 ma trận.", "is_correct": false, "images": []}, {"text": "Áp dụng chọn 1 giá trị trong các điểm ảnh nằm bao bởi 1 nhân lọc.", "is_correct": false, "images": []}]}, {"question_num": 26, "question": "Câu 26: Ảnh màu là:", "images": [], "options": [{"text": "Ảnh có 3 kênh màu cơ bản, mỗi kênh màu là 1 ảnh xám", "is_correct": true, "images": []}, {"text": "Ảnh có 3 kênh màu cơ bản, mỗi kênh màu là 1 ảnh nhị phân", "is_correct": false, "images": []}, {"text": "Ảnh có 4 kênh màu cơ bản, mỗi kênh màu là 1 ảnh xám", "is_correct": false, "images": []}, {"text": "Ảnh có 1 kênh màu cơ bản là 1 ảnh xám", "is_correct": false, "images": []}]}, {"question_num": 27, "question": "Câu 27: Biến đổi Fourier dựa trên nguyên lý:", "images": [], "options": [{"text": "Bất cứ 1 hàm tuần hoàn nào cũng có thể biểu diễn dưới dạng 1 tổng có trọng số của các hàm tan/cosin có tần số và biên độ khác nhau", "is_correct": false, "images": []}, {"text": "Bất cứ 1 hàm tuần hoàn nào cũng có thể biểu diễn dưới dạng 1 tổng có trọng số của các hàm sin/cosin có tần số và biên độ khác nhau", "is_correct": true, "images": []}, {"text": "Bất cứ 1 hàm nào cũng có thể biểu diễn dưới dạng 1 tổng có trọng số của các hàm sin/cosin có tần số và biên độ khác nhau", "is_correct": false, "images": []}, {"text": "Biến đổi tín hiệu ảnh thành tín hiều trong miền tần số", "is_correct": false, "images": []}]}, {"question_num": 28, "question": "Câu 28: Đối với phép giãn ảnh nhị phân, giá trị output của mỗi điểm ảnh áp dụng phần tử cấu trúc sẽ là:", "images": [], "options": [{"text": "Giá trị trung bình nhất trong số các điểm lân cận", "is_correct": false, "images": []}, {"text": "Giá trị phần tử trung vị trong số các điểm lân cận", "is_correct": false, "images": []}, {"text": "Giá trị nhỏ nhất trong số các điểm lân cận", "is_correct": false, "images": []}, {"text": "Giá trị lớn nhất trong số các điểm lân cận", "is_correct": true, "images": []}]}, {"question_num": 29, "question": "Câu 29: Lọc thông cao là phép lọc:", "images": [], "options": [{"text": "Chỉ giữ lại các tín hiệu có tần số thấp", "is_correct": false, "images": []}, {"text": "Chỉ loại bỏ các tín hiệu có tần số thấp", "is_correct": false, "images": []}, {"text": "Chỉ loại bỏ các tín hiệu có tần số cao", "is_correct": false, "images": []}, {"text": "Chỉ giữ lại các tín hiệu có tần số cao", "is_correct": true, "images": []}]}, {"question_num": 30, "question": "Câu 30: Để lọc nhiễu của một ảnh chụp từ vệ tinh có kích thước lớn, phải sử dụng bộ lọc:", "images": [], "options": [{"text": "Lọc thông thấp", "is_correct": false, "images": []}, {"text": "Lọc trung bình", "is_correct": true, "images": []}, {"text": "Lọc trung vị", "is_correct": false, "images": []}, {"text": "Lọc thông cao", "is_correct": false, "images": []}]}, {"question_num": 31, "question": "Câu 31: Phép lọc nào cho hình ảnh mịn nhất :", "images": [], "options": [{"text": "Lọc Gaussian", "is_correct": true, "images": []}, {"text": "Lọc song phương", "is_correct": false, "images": []}, {"text": "Lọc trung vị", "is_correct": false, "images": []}, {"text": "Lọc trung bình", "is_correct": false, "images": []}]}, {"question_num": 32, "question": "Câu 32: Mục đích của xử lý ánh là:", "images": [], "options": [{"text": "Biến đổi hình ảnh trong thế giới thức thành ảnh 3 chiều trên máy tính", "is_correct": false, "images": []}, {"text": "Hiểu được nội dung của hình ảnh", "is_correct": false, "images": []}, {"text": "Biển diễn ảnh đẹp hơn", "is_correct": false, "images": []}, {"text": "Thực hiện các thuật toán biển đổi các thông tin của ảnh để thu được ảnh có chất lượng tốt hơn cho 1 mục đích nào đó ví dụ như biểu diễn đặc trưng của ảnh", "is_correct": true, "images": []}]}, {"question_num": 33, "question": "Câu 33: Phép lọc không gian được gọi là lọc không gian vì :", "images": [], "options": [{"text": "Biến đổi ảnh sang một không gian mới", "is_correct": false, "images": []}, {"text": "Thay đổi không gian giá trị của các điểm ảnh", "is_correct": false, "images": []}, {"text": "Biến đổi không gian hình ảnh của ảnh", "is_correct": false, "images": []}, {"text": "Nó thực hiện trên toàn bộ miền không gian của ảnh", "is_correct": true, "images": []}]}, {"question_num": 34, "question": "Câu 34: Biến đổi Fourier có thể dùng để :", "images": [], "options": [{"text": "Biểu diễn ảnh bởi các sóng sin và cosin", "is_correct": true, "images": []}, {"text": "Tách ảnh số thành nhiều thành phần ở các hướng và tỉ lệ khác nhau.", "is_correct": false, "images": []}, {"text": "Cài đặt thuật toán nhân chập hiệu quả.", "is_correct": false, "images": []}, {"text": "Nén ảnh.", "is_correct": false, "images": []}]}, {"question_num": 35, "question": "Câu 35: Việc tìm ngưỡng trong thuật toán tách ngưỡng toàn cục cần:", "images": [], "options": [{"text": "Một làn duy nhất trước khi thuật toán bắt đâu", "is_correct": false, "images": []}, {"text": "Không có đáp án đúng", "is_correct": false, "images": []}, {"text": "Chọn dựa vào phân tích biểu diễn histogram của ảnh", "is_correct": false, "images": []}, {"text": "Thực hiện qua một số lần lặp", "is_correct": true, "images": []}]}, {"question_num": 36, "question": "Câu 36: Ảnh màu là :", "images": [], "options": [{"text": "Ảnh được biểu diễn bằng ba ma trận các số nguyên với các phần tử nằm trong khoảng từ 0 tới 1", "is_correct": false, "images": []}, {"text": "Ảnh được biểu diễn bằng một ma trận các số nguyên", "is_correct": false, "images": []}, {"text": "Ảnh có 3 kênh màu, mỗi kênh là một ma trận các số nguyên có giá trị các phần tử nằm trong khoảng từ 0 đến 255", "is_correct": true, "images": []}, {"text": "Ảnh được biểu diễn bằng ba ma trận các số nguyên", "is_correct": false, "images": []}]}, {"question_num": 37, "question": "Câu 37: Một bộ lọc thông cao có thể thu được bằng cách :", "images": [], "options": [{"text": "Lấy thương của 1 và bộ lọc thông thấp tương ứng", "is_correct": false, "images": []}, {"text": "Lấy tích của 1 và bộ lọc thông thấp tương ứng", "is_correct": false, "images": []}, {"text": "Lấy hiệu của 1 và bộ lọc thông thấp tương ứng", "is_correct": true, "images": []}, {"text": "Lấy tổng của 1 và bộ lọc thông thấp tương ứng", "is_correct": false, "images": []}]}, {"question_num": 38, "question": "Câu 38: Ảnh xám là", "images": [], "options": [{"text": "Một ma trận các số nguyên với giá trị của các phần tử nằm trong khoảng từ 0 tới 255", "is_correct": true, "images": []}, {"text": "Một ma trận số nguyên trong khoảng từ 0 đến 2^8", "is_correct": false, "images": []}, {"text": "Một ma trận số nguyên với giá trị các phần tử nằm trong khoảng từ 0 tới 8^2", "is_correct": false, "images": []}, {"text": "Một ma trận số nguyên kích thước là 800*600", "is_correct": false, "images": []}]}, {"question_num": 39, "question": "Câu 39: Trong khôi phục ảnh, giá trị MSE (Mean Square Error)", "images": [], "options": [{"text": "Nên nằm trong một dải cố định", "is_correct": false, "images": []}, {"text": "Không có đáp án đúng", "is_correct": false, "images": []}, {"text": "Càng lớn thì càng tốt", "is_correct": false, "images": []}, {"text": "Càng nhỏ thì càng tốt", "is_correct": true, "images": []}]}, {"question_num": 40, "question": "Câu 40: Phép co ảnh nhằm :", "images": [], "options": [{"text": "Tăng kích thước các đối tượng tách biệt trong ảnh", "is_correct": false, "images": []}, {"text": "Không có đáp án đúng", "is_correct": false, "images": []}, {"text": "Giảm kích thước ảnh", "is_correct": false, "images": []}, {"text": "Thu hẹp một đối tượng dựa vào một phần tử cấu trúc", "is_correct": true, "images": []}]}, {"question_num": 41, "question": "Câu 41: Nội suy ảnh (image interpolation) là thao tác:", "images": [], "options": [{"text": "Tính các giá trị màu của các điểm ảnh của một ảnh mới dựa trên các giá trị màu của ảnh gốc", "is_correct": true, "images": []}, {"text": "Nhân ảnh gốc với một nhân", "is_correct": false, "images": []}, {"text": "Nhân ảnh gốc với chính nó", "is_correct": false, "images": []}, {"text": "Sinh các giá trị màu của mỗi điểm ảnh mới bằng một hàm tuyến tính của điểm ảnh tương ứng trong ảnh gốc", "is_correct": false, "images": []}]}, {"question_num": 42, "question": "Câu 42: Trong khôi phục ảnh, giá trị SNR (Signal to Noise Ratio):", "images": [], "options": [{"text": "Càng nhỏ càng tốt", "is_correct": false, "images": []}, {"text": "k có đáp án đúng", "is_correct": false, "images": []}, {"text": "càng lớn càng tốt", "is_correct": true, "images": []}, {"text": "Nên nằm trong 1 khoảng cố định", "is_correct": false, "images": []}]}, {"question_num": 43, "question": "Câu 43: Phép lọc nào không thể thực hiện bằng một phép nhân chập:", "images": [], "options": [{"text": "Lọc song phương", "is_correct": false, "images": []}, {"text": "Lọc trung vị", "is_correct": true, "images": []}, {"text": "lọc Gaussian", "is_correct": false, "images": []}, {"text": "Lọc trung bình", "is_correct": false, "images": []}]}, {"question_num": 44, "question": "Câu 44: Trong số các bộ lọc thông thấp, bộ lọc nào loại bỏ hiện tượng Ringing Effect triệt để nhất", "images": [], "options": [{"text": "Không có đáp án đúng", "is_correct": false, "images": []}, {"text": "Trung bình", "is_correct": false, "images": []}, {"text": "Trung vị", "is_correct": false, "images": []}, {"text": "Gaussian", "is_correct": true, "images": []}]}, {"question_num": 45, "question": "Câu 45: Bits per pixel là đại lượng đo của thuộc tính nào của ảnh :", "images": [], "options": [{"text": "Độ phân giải", "is_correct": false, "images": []}, {"text": "Độ sâu màu", "is_correct": true, "images": []}, {"text": "Tỉ lệ ảnh", "is_correct": false, "images": []}, {"text": "Kích thước của ảnh", "is_correct": false, "images": []}]}, {"question_num": 46, "question": "Câu 46: Công thức tính giá trị ảnh âm bản Ineg từ ảnh gốc I là:", "images": [], "options": [{"text": "Ineg = 127 - I", "is_correct": false, "images": []}, {"text": "Ineg = 128 - I", "is_correct": false, "images": []}, {"text": "Ineg = 255 - I", "is_correct": true, "images": []}, {"text": "Ineg = 256 – I", "is_correct": false, "images": []}]}, {"question_num": 47, "question": "Câu 47: Để làm mượt ảnh", "images": [], "options": [{"text": "Thực hiện co ảnh, sau đó giãn ảnh", "is_correct": false, "images": []}, {"text": "Thực hiện giãn ảnh, sau đó đóng ảnh", "is_correct": true, "images": []}, {"text": "Hai lần giãn ảnh, sau đó co ảnh", "is_correct": false, "images": []}, {"text": "Hai lần đóng ảnh, sau đó giãn ảnh", "is_correct": false, "images": []}]}, {"question_num": 48, "question": "Câu 48: Trong lọc ảnh bằng phương pháp NonLocalMean", "images": [], "options": [{"text": "Các đường nét của ảnh bị mờ đi nhưng ít hơn so với lọc Gaussian", "is_correct": true, "images": []}, {"text": "Ảnh bị mờ đi đáng kể", "is_correct": false, "images": []}, {"text": "Độ tương phản của ảnh được tăng lên", "is_correct": false, "images": []}, {"text": "Ảnh trở nên sắc nết hơn", "is_correct": false, "images": []}]}, {"question_num": 49, "question": "Câu 49: Với mỗi phép lọc, có 3 bộ lọc tần số phổ biến có thể sử dụng là:", "images": [], "options": [{"text": "Butterworth,Gaussian và median", "is_correct": false, "images": []}, {"text": ".Ideal, Butterworth và median", "is_correct": false, "images": []}, {"text": "Ideal, Butterworth và Gaussian", "is_correct": true, "images": []}, {"text": "Ideal,Gaussian và median", "is_correct": false, "images": []}]}, {"question_num": 50, "question": "Câu 50: Hình ảnh sau là một bộ lọc:", "images": ["images/image49.png"], "options": [{"text": "Thông thấp Butterworth", "is_correct": false, "images": []}, {"text": "Thông cao Butterworth", "is_correct": true, "images": []}, {"text": "Thông cao Ideal", "is_correct": false, "images": []}, {"text": "Thông thấp Ideal", "is_correct": false, "images": []}]}, {"question_num": 51, "question": "Câu 51: Độ phân giải của ảnh là :", "images": [], "options": [{"text": "Đại lượng cho biết khả năng hiển thị số màu sắc của ảnh", "is_correct": false, "images": []}, {"text": "Đại lượng cho biết tần số của thông tin ảnh", "is_correct": false, "images": []}, {"text": "Đại lượng cho biết sự phân bố các giá trị màu sắc trong ảnh", "is_correct": false, "images": []}, {"text": "Đại lượng tính bằng số cột nhân và số hàng của ảnh", "is_correct": true, "images": []}]}, {"question_num": 52, "question": "Câu 52: Các phép toán logic thực hiện trên ảnh nhằm :", "images": [], "options": [{"text": "Lấy một phần của ảnh hoặc để tạo các hiệu ứng", "is_correct": true, "images": []}, {"text": "Tăng độ tương phản", "is_correct": false, "images": []}, {"text": "Lọc nhiễu trong ảnh", "is_correct": false, "images": []}, {"text": "Tăng cường độ sáng", "is_correct": false, "images": []}]}, {"question_num": 53, "question": "Câu 53: Các bộ lọc có thể thực hiện bằng phép nhân chập là :", "images": [], "options": [{"text": "Bộ lọc trung vị và bộ lọc Gaussian", "is_correct": false, "images": []}, {"text": "Bộ lọc trung bình và bộ lọc trung vị", "is_correct": false, "images": []}, {"text": "Bộ lọc trung bình và bộ lọc Gaussian", "is_correct": true, "images": []}, {"text": "Bộ lọc Gaussian và lọc thông cao", "is_correct": false, "images": []}]}, {"question_num": 54, "question": "Câu 54: (**)Việc xác định một điểm có thuộc về một vùng ảnh hay không có thể thực hiện dựa vào các giá trị", "images": [], "options": [{"text": "Tổng sai khác về màu sắc và khoảng cách", "is_correct": false, "images": []}, {"text": "Trung bình hoặc phương sai của màu sắc", "is_correct": false, "images": []}, {"text": "Khoảng cách từ điểm đó tới các điểm trong vùng đang xét", "is_correct": true, "images": []}, {"text": "Độ sai biệt về màu sắc", "is_correct": false, "images": []}]}, {"question_num": 55, "question": "Câu 55: Khôi phục ảnh nhằm", "images": [], "options": [{"text": "Làm cho ảnh đẹp hơn", "is_correct": false, "images": []}, {"text": "Khôi phục một ảnh bị suy thoái về nội dung và chất lượng ban đầu của nó", "is_correct": true, "images": []}, {"text": "Loại bỏ các chi tiết thừa của ảnh", "is_correct": false, "images": []}, {"text": "Loại bỏ nhiễu", "is_correct": false, "images": []}]}, {"question_num": 56, "question": "Câu 56: Công thức tính độ tương phản của một ảnh I là:", "images": [], "options": [{"text": "max(I) – min(I)", "is_correct": true, "images": []}, {"text": "mean(I) – min(I)", "is_correct": false, "images": []}, {"text": "2max(I) – min(I)", "is_correct": false, "images": []}, {"text": "max(I) – mean(I)", "is_correct": false, "images": []}]}, {"question_num": 57, "question": "Câu 57: Phép giãn ảnh nhằm :", "images": [], "options": [{"text": "Làm kích thước ảnh to hơn", "is_correct": false, "images": []}, {"text": "Mở rộng các vùng tách biệt của ảnh", "is_correct": false, "images": []}, {"text": "Làm kích thước các đối tượng trong ảnh nhỏ đi", "is_correct": false, "images": []}, {"text": "Mở rộng một đối tượng dựa vào một phần tử cấu trúc", "is_correct": true, "images": []}]}, {"question_num": 58, "question": "Câu 58: Tách ngưỡng là phương pháp nhằm :", "images": [], "options": [{"text": "Tăng độ tương phản của ảnh", "is_correct": false, "images": []}, {"text": "Tách các đối tượng cần quan tâm trong ảnh với phần còn lại của ảnh", "is_correct": true, "images": []}, {"text": "Loại bỏ nhiễu của ảnh", "is_correct": false, "images": []}, {"text": "Làm nổi bật các đường biên của ảnh", "is_correct": false, "images": []}]}, {"question_num": 59, "question": "Câu 59: Ứng dụng chủ yếu của phép lọc thông cao là(Phép lọc thông cao được ứng dụng chủ yếu)", "images": [], "options": [{"text": "Không có đáp án đúng", "is_correct": false, "images": []}, {"text": "Làm sắc nét ảnh", "is_correct": true, "images": []}, {"text": "Khôi phục ảnh", "is_correct": false, "images": []}, {"text": "Loại bỏ nhiễu muối tiêu", "is_correct": false, "images": []}]}, {"question_num": 60, "question": "Câu 60: Kỹ thuật phân đoạn dựa vào tách ngưỡng không được sử dụng vì:", "images": [], "options": [{"text": "Không có đáp án đúng", "is_correct": true, "images": []}, {"text": "Không có hiệu quả tốt", "is_correct": false, "images": []}, {"text": "Chạy quá chậm", "is_correct": false, "images": []}, {"text": "Quá đơn giản", "is_correct": false, "images": []}]}, {"question_num": 61, "question": "Câu 61: Để tính histogram của một ảnh màu ta cần :", "images": [], "options": [{"text": "Tính histogram trên một kênh là đủ", "is_correct": false, "images": []}, {"text": "Tính histogram của giá trị trung bình của ba kênh màu", "is_correct": false, "images": []}, {"text": "Không tính được", "is_correct": false, "images": []}, {"text": "Thực hiện việc tính histogram của ba kênh màu", "is_correct": true, "images": []}]}, {"question_num": 62, "question": "Câu 62: Nội suy láng giềng gần nhất là phương pháp:", "images": [], "options": [{"text": "Giá trị điểm ảnh mới được gán bằng giá trị nhỏ nhất trong lân cận của nó trong ảnh gốc", "is_correct": false, "images": []}, {"text": "Gán giá trị màu của điểm ảnh mới bằng với giá trị điểm ảnh gần nó trong ảnh gốc.", "is_correct": true, "images": []}, {"text": "Giá trị điểm ảnh mới được gán bằng tổ hợp tuyến tính của 4 điểm lân cận với nó trong ảnh gốc.", "is_correct": false, "images": []}, {"text": "Giá trị điểm ảnh mới được gán bằng tổ hợp tuyến tính của 16 điểm lân cận với nó trong ảnh gốc.", "is_correct": false, "images": []}]}, {"question_num": 63, "question": "Câu 63: Các bộ lọc làm mịn ảnh có đặc điểm", "images": [], "options": [{"text": "Làm giảm nhiễu và tăng cường độ sắc nét của ảnh", "is_correct": false, "images": []}, {"text": "Loại bỏ nhiễu nhưng cũng làm mất đi các đặc điểm sắc nét của ảnh", "is_correct": true, "images": []}, {"text": "Tăng cường độ sắc nét của ảnh", "is_correct": false, "images": []}, {"text": "Làm giảm độ sắc nét của ảnh", "is_correct": false, "images": []}]}, {"question_num": 64, "question": "Câu 64: Phát biểu nào sau đây đúng với tách ngưỡng toàn cục cơ bản để phân đoạn ảnh:", "images": [], "options": [{"text": "Khá phức tạp khi cài đặt thực tế.", "is_correct": false, "images": []}, {"text": "Phương pháp cơ bản dễ bị ảnh hưởng bởi nhiễu", "is_correct": true, "images": []}, {"text": "Cho kết quả tốt trong đa số các trường hợp", "is_correct": false, "images": []}]}, {"question_num": 65, "question": "Câu 65: Các đặc điểm nổi bật của thuật toán K-Mean:", "images": [], "options": [{"text": "Luôn cho kết quả tối ưu nhất.", "is_correct": false, "images": []}, {"text": "Đơn giản và cho kết quả tốt nhất.", "is_correct": false, "images": []}, {"text": "Nhanh, luôn hội tụ, đơn giản.", "is_correct": true, "images": []}, {"text": "Nhanh và cho kết quả tối ưu nhất.", "is_correct": false, "images": []}]}, {"question_num": 66, "question": "Câu 66: Một số nhược điểm của thuật toán K-Mean:", "images": [], "options": [{"text": "Không có đáp án đúng.", "is_correct": false, "images": []}, {"text": "Chậm và không phải lúc nào cũng hội tụ.", "is_correct": false, "images": []}, {"text": "Chỉ cho giá trị tối ưu cục bộ và nghiệm không là duy nhất.", "is_correct": true, "images": []}, {"text": "Chỉ cho giá trị tối ưu cục bộ và chậm.", "is_correct": false, "images": []}]}, {"question_num": 67, "question": "Câu 67: Một số nhược điểm của thuật toán K-Mean:", "images": [], "options": [{"text": "Không có đáp án đúng.", "is_correct": false, "images": []}, {"text": "Chậm và không phải lúc nào cũng hội tụ.", "is_correct": false, "images": []}, {"text": "Chỉ cho giá trị tối ưu cục bộ và nghiệm không là duy nhất.", "is_correct": true, "images": []}, {"text": "Chỉ cho giá trị tối ưu cục bộ và chậm.", "is_correct": false, "images": []}]}, {"question_num": 68, "question": "Câu 68: Hình ảnh sau là một bộ lọc:", "images": ["images/image49.png"], "options": [{"text": "Thông thấp Butterworth", "is_correct": false, "images": []}, {"text": "Thông cao Butterworth", "is_correct": true, "images": []}, {"text": "Thông cao Ideal", "is_correct": false, "images": []}, {"text": "Thông thấp Ideal", "is_correct": false, "images": []}]}, {"question_num": 69, "question": "Câu 69: Ảnh nhị phân là ảnh có:", "images": [], "options": [{"text": "Mỗi điểm ảnh chỉ có giá trị màu sắc là 0 hoặc 1", "is_correct": true, "images": []}, {"text": "Mỗi điểm ảnh được biểu diễn bằng 1 xâu bit", "is_correct": false, "images": []}, {"text": "Mỗi điểm ảnh được biểu diễn bằng 2 bit", "is_correct": false, "images": []}, {"text": "Mỗi điểm ảnh có 0 hoặc 1 giá trị", "is_correct": false, "images": []}]}, {"question_num": 70, "question": "Câu 70: Phân đoạn ảnh thường được thực hiện với:", "images": [], "options": [{"text": "Ảnh nhị phân", "is_correct": false, "images": []}, {"text": "Ảnh xám", "is_correct": false, "images": []}, {"text": "Ảnh xám và ảnh nhị phân", "is_correct": false, "images": []}, {"text": "Ảnh màu", "is_correct": true, "images": []}]}, {"question_num": 71, "question": "Câu 71: Lọc thông thấp là phép lọc", "images": [], "options": [{"text": "Chỉ loại bỏ các tín hiệu có tần số cao", "is_correct": false, "images": []}, {"text": "Chỉ giữ lại các tín hiệu có tần số thấp", "is_correct": true, "images": []}, {"text": "Chỉ giữ lại các tín hiệu có tần số cao", "is_correct": false, "images": []}, {"text": "Chỉ loại bỏ các tín hiệu có tần số thấp", "is_correct": false, "images": []}]}, {"question_num": 72, "question": "Câu 72: Lọc trung vị linh hoạt có thể dùng để", "images": [], "options": [{"text": "Khôi phục ảnh bị nhiễu xung", "is_correct": true, "images": []}, {"text": "Khôi phục các ảnh bị nhiễu định kì", "is_correct": false, "images": []}, {"text": "Khôi phục các ảnh bị nhiễu theo mô hình hàm mũ", "is_correct": false, "images": []}, {"text": "Khôi phục các ảnh bị nhiễu Gaussian", "is_correct": false, "images": []}]}, {"question_num": 73, "question": "Câu 73: Các bộ lọc làm sắc nét ảnh có đặc điểm", "images": [], "options": [{"text": "Tổng các phần tử của nhân bằng 0", "is_correct": true, "images": []}, {"text": "Các phần tử của nhân đều âm", "is_correct": false, "images": []}, {"text": "Các phần tử của nhân đều không âm", "is_correct": false, "images": []}, {"text": "Tổng các phần tử của nhân bằng 1", "is_correct": false, "images": []}]}, {"question_num": 74, "question": "Câu 74: Lọc chặn dải thông là phép lọc :", "images": [], "options": [{"text": "Chỉ giữ lại các tín hiệu có tần số cao", "is_correct": false, "images": []}, {"text": "Chỉ giữ lại các tín hiệu nằm trong một miền tần số xác định", "is_correct": false, "images": []}, {"text": "Chỉ loại bỏ các tần số nằm trong một miền tần số xác định", "is_correct": true, "images": []}, {"text": "Chỉ giữ lại các tín hiệu có tần số thấp", "is_correct": false, "images": []}]}, {"question_num": 75, "question": "Câu 75: Tốc độ của bộ lọc nào là chậm nhất (cùng ảnh và kích thước nhân)", "images": [], "options": [{"text": "Bộ lọc trung bình", "is_correct": false, "images": []}, {"text": "Bộ lọc trung vị", "is_correct": true, "images": []}, {"text": "Cả ba bộ lọc có cùng tốc độ", "is_correct": false, "images": []}, {"text": "Bộ lọc Gaussian", "is_correct": false, "images": []}]}, {"question_num": 76, "question": "Câu 76: Tốc độ của bộ lọc nào là chậm nhất (cùng ảnh và kích thước nhân)", "images": [], "options": [{"text": "Bộ lọc trung bình", "is_correct": false, "images": []}, {"text": "Bộ lọc trung vị", "is_correct": true, "images": []}, {"text": "Cả ba bộ lọc có cùng tốc độ", "is_correct": false, "images": []}, {"text": "Bộ lọc Gaussian", "is_correct": false, "images": []}]}, {"question_num": 77, "question": "Câu 77: Hình ảnh sau là một bộ lọc:", "images": ["images/image27.png"], "options": [{"text": "Thông cao Ideal", "is_correct": false, "images": []}, {"text": "Thông thấp Gaussian", "is_correct": false, "images": []}, {"text": "Thông thấp Ideal", "is_correct": true, "images": []}, {"text": "Thông thấp Butterworth", "is_correct": false, "images": []}]}, {"question_num": 78, "question": "Câu 78: Ảnh nhị phân, ảnh xám và ảnh màu lần lượt có giá trị bits per pixel là:", "images": [], "options": [{"text": "2, 8, 24", "is_correct": false, "images": []}, {"text": "1, 8, 32", "is_correct": false, "images": []}, {"text": "1, 8, 24", "is_correct": true, "images": []}, {"text": "1, 16, 24", "is_correct": false, "images": []}]}, {"question_num": 79, "question": "Câu 79: Phép lọc nào hiệu quả với các nhiễu muối tiêu", "images": [], "options": [{"text": "Lọc trung vị", "is_correct": true, "images": []}, {"text": "Lọc trung bình", "is_correct": false, "images": []}, {"text": "Lọc song phương", "is_correct": false, "images": []}, {"text": "Lọc Gaussian", "is_correct": false, "images": []}]}, {"question_num": 80, "question": "Câu 80: Đâu không phải là một kiểu phần tử cấu trúc có thể sử dụng với biến đổi hình thái (Đâu không phải là một kiểu phần tử cấu trúc có thể sử dụng với các phép biến đổi hình thái)", "images": [], "options": [{"text": "Hình sao", "is_correct": true, "images": []}, {"text": "Hình kim cương", "is_correct": false, "images": []}, {"text": "Hình vuông", "is_correct": false, "images": []}, {"text": "Hình cái đĩa", "is_correct": false, "images": []}]}, {"question_num": 81, "question": "Câu 81: Tăng cường độ tương phản nhằm:", "images": [], "options": [{"text": "Ánh xạ miền giá trị cường độ sáng của ảnh vào một dải rộng hơn cho trước.", "is_correct": false, "images": []}, {"text": "Cân bằng màu sắc của ảnh.", "is_correct": false, "images": []}, {"text": "Nén các giá trị điểm ảnh vào một vùng hẹp hơn.", "is_correct": false, "images": []}, {"text": "Giãn miền giá trị cường độ sáng của các điểm ảnh nhằm làm nổi rõ các chi tiết của ảnh.", "is_correct": true, "images": []}]}, {"question_num": 82, "question": "Câu 82: Thuật toán MeanShift có các đặc điểm sau:", "images": [], "options": [{"text": "Rất nhanh hội tụ và có kết quả duy nhất.", "is_correct": false, "images": []}, {"text": "Một trong các thuật toán hiệu quả nhất hiện nay cho bài toán phân đoạn ảnh.", "is_correct": true, "images": []}, {"text": "Nhanh hơn thuật toán K-Mean với số vùng trong ảnh cần phân đoạn là lớn.", "is_correct": false, "images": []}, {"text": "Chậm và không có kết quả duy nhất.", "is_correct": false, "images": []}]}, {"question_num": 83, "question": "Câu 83: Biến đổi logarit là thao tác nhằm", "images": [], "options": [{"text": "Tăng độ tương phản của ảnh", "is_correct": false, "images": []}, {"text": "Tách đối tượng cần quan tâm khỏi phần còn lại của ảnh", "is_correct": false, "images": []}, {"text": "Giảm giá trị của các điểm ảnh nằm trong vùng giá trị rất cao về miền giá trị thấp để biểu diễn ảnh", "is_correct": true, "images": []}, {"text": "Làm nổi bật các chi tiết của ảnh", "is_correct": false, "images": []}]}, {"question_num": 84, "question": "Câu 84: Tốc độ của bộ lọc nào là nhanh nhất (cùng ảnh và kích thước nhân)", "images": [], "options": [{"text": "Cả ba bộ lọc có cùng tốc độ", "is_correct": false, "images": []}, {"text": "Bộ lọc trung vị", "is_correct": false, "images": []}, {"text": "Bộ lọc Gaussian", "is_correct": false, "images": []}, {"text": "Bộ lọc trung bình", "is_correct": true, "images": []}]}, {"question_num": 85, "question": "Câu 85: Ảnh xám là ảnh có giá trị bits per pixel là", "images": [], "options": [{"text": "1", "is_correct": false, "images": []}, {"text": "8", "is_correct": true, "images": []}, {"text": "4", "is_correct": false, "images": []}, {"text": "2", "is_correct": false, "images": []}]}, {"question_num": 86, "question": "Câu 86: Nội suy bicubic là phương pháp:", "images": [], "options": [{"text": "Gán giá trị màu cho điểm ảnh mới bằng tổ hợp phi tuyến của 4 giá trị điểm ảnh trong ảnh gốc", "is_correct": false, "images": []}, {"text": "Gán giá trị màu của điểm ảnh mới bằng với giá trị điểm ảnh gần nó trong ảnh gốc", "is_correct": false, "images": []}, {"text": "Gán giá trị của điểm ảnh mới dựa trên 16 giá trị bao gồm các điểm ảnh cũ và các giá trị đạo hàm liên quan.", "is_correct": true, "images": []}, {"text": "Gán giá trị điểm ảnh mới bằng với tổ hợp tuyến tính của 16 điểm lân cận với nó trong ảnh gốc", "is_correct": false, "images": []}]}, {"question_num": 87, "question": "Câu 87: Phép lọc trung bình có thể được thực hiện bằng", "images": [], "options": [{"text": "Phép nhân chập ảnh gốc với nhân có các phần tử bằng nhau và bằng 1/(M-N) với M*N là kích thước của nhân", "is_correct": false, "images": []}, {"text": "Phép nhân chập ảnh gốc với nhân có các phần tử bằng nhau và bằng 1/(M*N) với M*N là kích thước của nhân", "is_correct": true, "images": []}, {"text": "Phép nhân chập ảnh gốc với nhân có các phần tử bằng nhau và bằng 1/(M+N) với M*N là kích thước của nhân", "is_correct": false, "images": []}, {"text": "Phép nhân chập ảnh gốc với nhân có các phần tử bằng nhau và bằng N/M với M*N là kích thước của nhân", "is_correct": false, "images": []}]}, {"question_num": 88, "question": "Câu 88: Phân đoạn ảnh nhằm mục đích:", "images": [], "options": [{"text": "Không có đáp án đúng", "is_correct": false, "images": []}, {"text": "Tách đối tượng cần quan tâm khỏi vùng ảnh nền.", "is_correct": false, "images": []}, {"text": "Chỉ lấy vùng đối tượng cần quan tâm để nhận dạng.", "is_correct": false, "images": []}, {"text": "Chia tách ảnh thành các vùng gồm các điểm ảnh hoặc đối tượng ảnh có liên quan chặt chẽ với nhau theo một tiêu chí nào đó.", "is_correct": true, "images": []}]}, {"question_num": 89, "question": "Câu 89: Một trong các mô hình khôi phục ảnh là dựa vào", "images": [], "options": [{"text": "Dựa vào việc phất triển nhiễu trong ảnh", "is_correct": false, "images": []}, {"text": "Dụa vào phép lọc thông thấp", "is_correct": false, "images": []}, {"text": "Dựa vào biến đổi Fourier", "is_correct": false, "images": []}, {"text": "Dựa vào mô hình nhiễu dự đoán trước", "is_correct": true, "images": []}]}, {"question_num": 90, "question": "Câu 90: Ứng dụng chủ yếu của phép lọc thông thấp là (Phép lọc thông thấp được ứng dụng chủ yếu là)", "images": [], "options": [{"text": "Làm sắc nét ảnh", "is_correct": false, "images": []}, {"text": "Khôi phục ảnh", "is_correct": false, "images": []}, {"text": "Không có đáp án đúng", "is_correct": false, "images": []}, {"text": "Lọc nhiễu", "is_correct": true, "images": []}]}, {"question_num": 91, "question": "Câu 91: Mục tiêu của phép xử lý hình thái là :", "images": [], "options": [{"text": "Làm cho ảnh đẹp hơn", "is_correct": false, "images": []}, {"text": "Khôi phục ảnh về nguyên trạng ban đầu", "is_correct": false, "images": []}, {"text": "Xác định, biểu diễn và xử lý hình dạng của các đối tượng trong ảnh", "is_correct": true, "images": []}, {"text": "Loại bỏ nhiễu trong ảnh", "is_correct": false, "images": []}]}, {"question_num": 92, "question": "Câu 92: Hiện tượng Ringing Effect", "images": [], "options": [{"text": "Không xuất hiện ở lọc thông thấp", "is_correct": false, "images": []}, {"text": "Không xuất hiện ở lọc thông cao", "is_correct": false, "images": []}, {"text": "Xuất hiện ở cả lọc thông cao và lọc thông thấp", "is_correct": true, "images": []}, {"text": "Xuất hiện nhưng không đáng kể ở lọc thông cao", "is_correct": false, "images": []}]}, {"question_num": 93, "question": "Câu 93: So với lọc ảnh trong miền không gian, lọc ảnh trong miền tần số có ưu điểm", "images": [], "options": [{"text": "Tốn ít bộ nhớ hơn", "is_correct": false, "images": []}, {"text": "Nhanh hơn và hiệu quả hơn khi các nhiễu thể hiện không rõ", "is_correct": true, "images": []}, {"text": "Dễ hơn", "is_correct": false, "images": []}, {"text": "Hiệu quả hơn", "is_correct": false, "images": []}]}, {"question_num": 94, "question": "Câu 94: Kỹ thuật nào trong đây không được sử dụng cho phân đoạn ảnh", "images": [], "options": [{"text": "Dựa trên vùng", "is_correct": false, "images": []}, {"text": "Phân cụm dữ liệu", "is_correct": false, "images": []}, {"text": "Tách ngưỡng", "is_correct": false, "images": []}, {"text": "Lọc nhiễu", "is_correct": true, "images": []}]}, {"question_num": 95, "question": "Câu 95: Trong xử lý hình thái ảnh nhị phân, yếu tố nào sau đây sẽ ảnh hưởng nhiều nhất và lớn nhất tới hướng giãn của ảnh:", "images": [], "options": [{"text": "Tất cả các đáp án đều đúng", "is_correct": false, "images": []}, {"text": "Tâm của phần tử cấu trúc.", "is_correct": false, "images": []}, {"text": "Kích thước của phần tử cấu trúc", "is_correct": true, "images": []}, {"text": "Giá trị của phần tử cấu trúc", "is_correct": false, "images": []}]}, {"question_num": 96, "question": "Câu 96: Các mối liên kết giữa các điểm ảnh được sử dụng để làm gì?", "images": [], "options": [{"text": "Xác định sự ràng buộc về vị trí", "is_correct": false, "images": []}, {"text": "Xác định sự ràng buộc về cường độ sáng", "is_correct": false, "images": []}, {"text": "Xác định các điểm lân cận", "is_correct": false, "images": []}, {"text": "Xác định giới hạn của đối tượng vật thể hoặc xác định vùng trong một ảnh", "is_correct": true, "images": []}]}, {"question_num": 97, "question": "Câu 97: Chức năng của bộ tiền xử lý trong hệ thống nhận dạng và xử lý ảnh:", "images": [], "options": [{"text": "Nâng cao chất lượng ảnh.", "is_correct": true, "images": []}, {"text": "Tách vụng ảnh cần xử lý", "is_correct": false, "images": []}, {"text": "Lấy thông tin ảnh", "is_correct": false, "images": []}, {"text": "Làm đẹp ảnh", "is_correct": false, "images": []}]}, {"question_num": 98, "question": "Câu 98: Sau khi số hóa ảnh ta thu được một ma trận kết quả. Phát biểu nào dưới đây là sai?", "images": [], "options": [{"text": "Giá trị của các phần tử tùy thuộc vào loại ảnh, tuy nhiên phải nhỏ hơn 255", "is_correct": true, "images": []}, {"text": "Giá trị nằm trong khoảng đoạn dải xám [0,255]", "is_correct": false, "images": []}, {"text": "Các phần tử trong ma trận kết quả được gọi là điểm ảnh", "is_correct": false, "images": []}, {"text": "Giá trị của các phần tử là số nguyên", "is_correct": false, "images": []}]}, {"question_num": 99, "question": "Câu 99: Phát biểu nào sau đây chưa đúng với modules nhận dạng và nội suy ảnh?", "images": [], "options": [{"text": "Quá trình nhận dạng và nội suy ảnh thường được thu bằng cách so sánh với mẫu chuẩn đã được học hoặc lưu từ trước", "is_correct": false, "images": []}, {"text": "Theo lý thuyết về nhận dạng, các mô hình toán học về ảnh được phân theo 2 loại nhận dạng cơ bản: Nhận dạng theo đầu vào hoặc nhận dạng theo đầu ra", "is_correct": false, "images": []}, {"text": "Nhận dạng ảnh là quá trình xác định ảnh (Nhận dạng ảnh là quá trình xác định nội dung của ảnh)", "is_correct": true, "images": []}, {"text": "Nội suy là phán đoán theo cơ sở nhận dạng", "is_correct": false, "images": []}]}, {"question_num": 100, "question": "Câu 100: Phát biểu nào sau đây là sai đổi với xử lý Histogram?", "images": [], "options": [{"text": "Chất lượng của ảnh có thể được thể hiện qua biểu đồ Histogram", "is_correct": false, "images": []}, {"text": "Có sử dụng mặt nạ để trích rút các vùng ảnh lân cận điểm đang xét.", "is_correct": false, "images": []}, {"text": "Đối với ảnh tối thì các phần tử Histogram được tập trung tại vùng sáng thấp", "is_correct": false, "images": []}, {"text": "Là kĩ thuật cơ bản trong xử lý ảnh trong miền không gian (Xử lý Histogram là kĩ thuật cơ bản trong xử lý ảnh trong miền màu)", "is_correct": true, "images": []}]}, {"question_num": 101, "question": "Câu 101: Cho vùng ảnh A, xét điểm P có tạo độ là (x, y). Tập hợp những điểm nào sau đây là lân cận chéo của P?", "images": [], "options": [{"text": "{ (x+1, y+1); (x+1, y-1); (x-1, y+1); (x-1, y-1)}", "is_correct": true, "images": []}, {"text": "{ (x+1, y); (x+1, y-1); (x-1, y); (x-1, y-1)}", "is_correct": false, "images": []}, {"text": "{ (x+1, y); (x+1, y-1); (x-1, y+1); (x-1, y-1)}", "is_correct": false, "images": []}, {"text": "{ (x-1, y+1); (x+1, y-1); (x-1, y); (x-1, y-1)}", "is_correct": false, "images": []}]}, {"question_num": 102, "question": "Câu 102: Đối với ảnh màu sử dụng 3 byte để biểu diễn giá trị cường độ sáng thì phát biểu nào sau đây là đúng?", "images": [], "options": [{"text": "Thang độ xám R[0,256] G[0,256] B[0,255]", "is_correct": false, "images": []}, {"text": "Thang độ xám R[0,255] G[0,255] B[0,255]", "is_correct": true, "images": []}, {"text": "Thang độ xám R(0,256) G(0,256) B(0,256)", "is_correct": false, "images": []}, {"text": "Thang độ xám R(0,255) G(0,255) B(0,255)", "is_correct": false, "images": []}]}, {"question_num": 103, "question": "Câu 103: Phương pháp mã hóa loạt dài có thể chia làm mấy phương pháp nhỏ?", "images": [], "options": [{"text": "2", "is_correct": true, "images": []}, {"text": "3", "is_correct": false, "images": []}, {"text": "5", "is_correct": false, "images": []}, {"text": "4", "is_correct": false, "images": []}]}, {"question_num": 104, "question": "Câu 104: Phát biểu nào sau đây về ảnh âm bản là sai?", "images": [], "options": [{"text": "Được sử dụng rộng rãi trong y học", "is_correct": false, "images": []}, {"text": "Ảnh âm bản có các giá trị mức xám từ 0 đến 256", "is_correct": true, "images": []}, {"text": "Ảnh âm bản là ảnh xám", "is_correct": false, "images": []}, {"text": "Giá trị của các điểm ảnh trong ảnh âm bản ngược với ảnh gốc trong dải xám của ảnh", "is_correct": false, "images": []}]}, {"question_num": 105, "question": "Câu 105: Phát biểu nào đây về ảnh số chưa chính xác?", "images": [], "options": [{"text": "Ảnh được biều thị bằng 1 hàm cường độ sáng 2 chiều f(x,y)", "is_correct": false, "images": []}, {"text": "Khi ta số hóa các tọa độ không gian và cường độ sáng của hàm f ta được ảnh số", "is_correct": false, "images": []}, {"text": "Giá trị của x, y trên các hệ trục được gọi mà mức xám hay cường độ sáng", "is_correct": true, "images": []}, {"text": "Khi biểu diễn trên máy tính ta có thể xem ảnh số như 1 ma trận", "is_correct": false, "images": []}]}, {"question_num": 106, "question": "Câu 106: Trong phương pháp cân bằng Histogram phát biểu nào sau đây là đúng?", "images": [], "options": [{"text": "Kết quả thu được phụ thuộc vào dải xám cần cân bằng", "is_correct": false, "images": []}, {"text": "Kết quả thu được có độ tương phản thấp hơn ảnh ban đầu", "is_correct": false, "images": []}, {"text": "Kết quả thu được phụ thuộc vào chất lượng ảnh đầu vào", "is_correct": false, "images": []}, {"text": "Kết quả thu được có độ tương phản cao hơn ảnh ban đầu", "is_correct": true, "images": []}]}, {"question_num": 107, "question": "Câu 107: Sử dụng phương pháp lặp cho vùng ảnh có kích thước MxN, Kích thước của ảnh sau khi lặp thu được là bao nhiều?", "images": [], "options": [{"text": "2(M – 1) x 2(N – 1)", "is_correct": false, "images": []}, {"text": "M x N", "is_correct": true, "images": []}, {"text": "2M – 1 x 2N – 1", "is_correct": false, "images": []}, {"text": "2M x 2N", "is_correct": false, "images": []}]}, {"question_num": 108, "question": "Câu 108: Các mối liên kết giữa các điểm ảnh được sử dụng để làm gì?", "images": [], "options": [{"text": "Xác định giới hạn của đối tượng vật thể hoặc xác định vùng trong một ảnh.", "is_correct": true, "images": []}, {"text": "Xác định sự ràng buộc về cường độ sáng", "is_correct": false, "images": []}, {"text": "Xác định sự ràng buộc về vị trí", "is_correct": false, "images": []}, {"text": "Xác định các điểm lân cận", "is_correct": false, "images": []}]}, {"question_num": 109, "question": "Câu 109: Đối với phương pháp miền không gian, phát biểu nào sau đây là sai?", "images": [], "options": [{"text": "Chủ yếu dựa vào phép biến đổi Fourier", "is_correct": true, "images": []}, {"text": "Tác động lên các vùng ảnh con", "is_correct": false, "images": []}, {"text": "Sử dụng các giá trị xám của pixel trong ảnh", "is_correct": false, "images": []}, {"text": "Thay đổi giá trị mức xám trực tiếp", "is_correct": false, "images": []}]}, {"question_num": 110, "question": "Câu 110: Có nhiều ứng dụng cần thiết phải phóng đại một vùng ảnh. Để thực hiện được điều đó, trong xử lý ảnh số có mấy phương pháp được sử dụng chủ yếu?", "images": [], "options": [{"text": "4 phương pháp", "is_correct": false, "images": []}, {"text": "2 phương pháp", "is_correct": false, "images": []}, {"text": "3 phương pháp", "is_correct": true, "images": []}, {"text": "5 phương pháp", "is_correct": false, "images": []}]}, {"question_num": 111, "question": "Câu 111: Trong phép dãn ảnh nhị phân, phát biểu nào sau đây là sai?", "images": [], "options": [{"text": "Việc tính toán cho các điểm ảnh còn lại dựa trên vùng ảnh gốc", "is_correct": false, "images": []}, {"text": "Thực hiện phép And", "is_correct": false, "images": []}, {"text": "Việc tính toán cho các điểm ảnh còn lại phải dựa vào kết quả thu được của bước tính trước", "is_correct": true, "images": []}, {"text": "Tâm của phần tử cấu trúc phải đặt vào điểm ảnh cần tính toán", "is_correct": false, "images": []}]}, {"question_num": 112, "question": "Câu 112: Trong phép dãn ảnh nhị phân, phép toán được sử dụng chính là gì?", "images": [], "options": [{"text": "OR", "is_correct": true, "images": []}, {"text": "AND", "is_correct": false, "images": []}, {"text": "Tất cả", "is_correct": false, "images": []}, {"text": "NOT", "is_correct": false, "images": []}]}, {"question_num": 113, "question": "Câu 113: Phát biểu nào sau đây là sai đối với xử lý hình thái ảnh nhị phân?", "images": [], "options": [{"text": "Ảnh nhị phân có thể được mô tả bằng một tập hợp, trong đó mỗi phần tử của tập hợp là một cặt giá trị (x,y) tương ứng với tọa độ của một điểm ảnh màu trắng trong ảnh.", "is_correct": true, "images": []}, {"text": "Xử lý hình thái là trích xuất các phần trong ảnh phục vụ cho việc biển diễn và mô tả các vùng trong ảnh", "is_correct": false, "images": []}, {"text": "Xử lý hình thái dựa trên lý thuyết tập hợp", "is_correct": false, "images": []}, {"text": "Xử lý hình thái được sử dụng cho các bước tiền xử lý: lọc hình thái, làm gầy…", "is_correct": false, "images": []}]}, {"question_num": 114, "question": "Câu 114: Trong xử lý hình thái ảnh nhị phân, việc chọn kích thước phần tử cấu trúc phải đảm bảo yếu tố nào sau đây?", "images": [], "options": [{"text": "Kích thước bất kì >= 1x1", "is_correct": false, "images": []}, {"text": "Kích thước hàng và cột phải là số lẻ", "is_correct": true, "images": []}, {"text": "Kích thước là 3 x 3", "is_correct": false, "images": []}, {"text": "Kích thước hàng và cột phải là số chẵn", "is_correct": false, "images": []}]}, {"question_num": 115, "question": "Câu 115: Trong phép giãn ảnh, nếu tâm của phần tử cấu trúc ta chọn lệch về phía bên trái thì vùng ảnh được giãn sẽ như thế nào?", "images": [], "options": [{"text": "Giãn về phía bên trên", "is_correct": false, "images": []}, {"text": "Giãn về phía bên dưới", "is_correct": false, "images": []}, {"text": "Giãn về phía tâm của phần tử cấu trúc", "is_correct": false, "images": []}, {"text": "Giãn về phía bên phải", "is_correct": true, "images": []}]}, {"question_num": 116, "question": "Câu 116: Đối với mã hóa loạt dài, trong trường hợp chiều dài của chuỗi lặp có thể lớn hơn 255 ta phải làm như thế nào?", "images": [], "options": [{"text": "Tách thành 2 chuỗi, một chuỗi có chiều dài 255, chuỗi kia là số bít còn lại", "is_correct": true, "images": []}, {"text": "Mã hóa cả chuỗi", "is_correct": false, "images": []}, {"text": "Tách 2 chuỗi có đội dài bằng nhau hoặc hơn nhau 1 bit", "is_correct": false, "images": []}, {"text": "Thêm bit 0 vào sau chuỗi cho tới khi có thể biểu diễn bằng 2 byte dữ liệu", "is_correct": false, "images": []}]}, {"question_num": 117, "question": "Câu 117: Trong các phương pháp điều chỉnh Histogram, phát biểu nào sau đây là sai?", "images": [], "options": [{"text": "Kết quả của phương pháp Cân bằng Histogram phụ thuộc vào thông số đầu ra.", "is_correct": true, "images": []}, {"text": "Các điểm ảnh được chỉnh sửa bởi một hàm chuyển đổi dựa trên mức xám của toàn bộ ảnh", "is_correct": false, "images": []}, {"text": "Kết quả của phương pháp Histogram maching phụ thuộc vào thông số cần đạt được của đầu ra", "is_correct": false, "images": []}, {"text": "Dải xám có thể điều chỉnh trong phương pháp cân bằng Histogram có thể lên tới [0,255]", "is_correct": false, "images": []}]}, {"question_num": 118, "question": "Câu 118: Phát biểu nào sao đây về các thuật toán nâng cao chất lượng ảnh trong miền không gian là đúng?", "images": [], "options": [{"text": "Toán tử điểm là phép biến đổi đối với từng điểm ảnh bất kì, liên quan tới các điểm lân cận khác.", "is_correct": false, "images": []}, {"text": "Toán tử điểm là phép biến đổi đối với từng điểm ảnh đang xét, không liên quan tới các điểm lân cận khác.", "is_correct": true, "images": []}, {"text": "Toán tử điểm là phép biến đổi đối với từng điểm ảnh đang xét, mọi biến đổi phải liên quan tới các điểm lân cận khác.", "is_correct": false, "images": []}, {"text": "Toán tử điểm là phép biến đổi đối với từng điểm ảnh bất kì, không liên quan tới các điểm lân cận khác.", "is_correct": false, "images": []}]}, {"question_num": 119, "question": "Câu 119: Phát biểu nào sau đây về ảnh số là sai?", "images": [], "options": [{"text": "Cường độ sáng của điểm ảnh chính là giá trị của f tại điểm (x,y)", "is_correct": false, "images": []}, {"text": "Tại một điểm ảnh, cường độ sáng cũng là mức xám", "is_correct": false, "images": []}, {"text": "Giá trị của các phần tử biểu diễn ảnh số trong ma trận tại hàng x, cột y chính là giá trị của hàm f tại tọa độ (x,y)", "is_correct": false, "images": []}, {"text": "Cường độ sáng của điểm ảnh phụ thuộc vào chất lượng của ảnh.", "is_correct": true, "images": []}]}, {"question_num": 120, "question": "Câu 120: Phát biểu nào sau đây là sai đối với phần tử cấu trúc trong phép giãn ảnh là sai?", "images": [], "options": [{"text": "Tâm của phần tử cấu trúc có thể ở vị trí bất kì", "is_correct": false, "images": []}, {"text": "Tâm của phần tử cấu trúc phải có giá trị bằng 1", "is_correct": true, "images": []}, {"text": "Kích thước bất kì, phải là 1 x 1", "is_correct": false, "images": []}, {"text": "Tâm của phần tử cấu trúc có giá trị bất kì", "is_correct": false, "images": []}]}, {"question_num": 121, "question": "Câu 121: Trong nhận dạng và xử lý ảnh có các modules cơ bản nào?", "images": [], "options": [{"text": "Thu nhận ảnh, tiền xử lý, phân đoạn ảnh, biểu diễn và miêu tả, cơ sở tri thức.", "is_correct": false, "images": []}, {"text": "Thu nhận ảnh, tiền xử lý, biểu diễn và miêu tả, nhận dạng và nội suy, cơ sở tri thức.", "is_correct": false, "images": []}, {"text": "Thu nhận ảnh, tiền xử lý, phân đoạn ảnh, biểu diễn và miêu tả, nhận dạng và nội suy, cơ sở tri thức", "is_correct": false, "images": []}, {"text": "Thu nhận ảnh, phân đoạn ảnh, biểu diễn và miêu tả, nhận dạng và nội suy", "is_correct": true, "images": []}]}, {"question_num": 122, "question": "Câu 122: Cho vùng ảnh A, xét điểm ảnh P có tọa độ là (x,y). Tập hợp những điểm nào sau đây là lân cận 4 của P?", "images": [], "options": [{"text": "{(x-1, y); (x, y-1); (x-1, y+1); (x+1, y)}", "is_correct": false, "images": []}, {"text": "{(x-1, y); (x, y-1); (x, y+1); (x+1, y)}", "is_correct": true, "images": []}, {"text": "{(x-1, y); (x, y-1); (x+1, y+1); (x+1, y)}", "is_correct": false, "images": []}, {"text": "{(x-1, y-1); (x, y-1); (x, y+1); (x+1, y)}", "is_correct": false, "images": []}]}, {"question_num": 123, "question": "Câu 123: Có mấy loại liên kết giữa các điểm ảnh", "images": [], "options": [{"text": "5", "is_correct": false, "images": []}, {"text": "4", "is_correct": true, "images": []}, {"text": "3", "is_correct": false, "images": []}, {"text": "2", "is_correct": false, "images": []}]}, {"question_num": 124, "question": "Câu 124: Trong phương pháp mã hóa loạt dài, mỗi một loạt dài được thay thế bởi một từ mã bao gồm mấy thành phần", "images": [], "options": [{"text": "4", "is_correct": false, "images": []}, {"text": "6", "is_correct": false, "images": []}, {"text": "3", "is_correct": true, "images": []}, {"text": "5", "is_correct": false, "images": []}]}, {"question_num": 125, "question": "Câu 125: việc nâng cao chất lượng ảnh trong xử lý ảnh số nhằm mục đích gì?", "images": [], "options": [{"text": "Ảnh đầu ra thích hợp cho việc xử lý thông tin", "is_correct": false, "images": []}, {"text": "Làm đẹp ảnh", "is_correct": false, "images": []}, {"text": "Làm mượt ảnh, giảm nhiễu", "is_correct": false, "images": []}, {"text": "Tăng độ tương phản, sắc nét", "is_correct": true, "images": []}]}, {"question_num": 126, "question": "Câu 126: Phát biểu nào sau đây là sai trong quá trình số hóa ảnh?", "images": [], "options": [{"text": "Số hóa các tọa độ không gian (x,y) được gọi là quá trình lấy mẫu", "is_correct": false, "images": []}, {"text": "Mỗi phần tử trong ma trận có giá trị nguyên", "is_correct": false, "images": []}, {"text": "Số hóa biên độ f(x,y) được gọi là quá trình lượng tử", "is_correct": false, "images": []}, {"text": "Hàm f(x,y) được lấy mẫu với khoảng cách bằng nhau được gọi lượng tử hóa và lấy mẫu ngẫu nhiên được mô tả bởi một ma trận", "is_correct": true, "images": []}]}, {"question_num": 127, "question": "Câu 127: Trong quá trình số hóa ảnh, phát biểu nào sau đây là sai?", "images": [], "options": [{"text": "Số hóa ảnh bao gồm 3 công việc: Lấy mẫu, lượng tử và miêu tả.", "is_correct": false, "images": []}, {"text": "Chất lượng của ảnh sau số hóa phụ thuộc vào số lượng mẫu cần lấy", "is_correct": true, "images": []}, {"text": "Mỗi phần tử trong ma trận tương ứng với một điểm ảnh", "is_correct": false, "images": []}, {"text": "Kết quả của số hóa ảnh được thể hiện dưới dạng ma trận 2 chiều", "is_correct": false, "images": []}]}, {"question_num": 128, "question": "Câu 128: Trong phương pháp biểu diễn bằng Mã chạy, phát biểu nào sau đây là sai?", "images": [], "options": [{"text": "Một vùng ảnh được mô tả bằng một tập các chuỗi số 0 và 1", "is_correct": false, "images": []}, {"text": "Một vùng ảnh R có thể mã hóa đơn giản nhờ một mã nhị phân, nếu f(x,y) là hàm mô tả mức xám tại tọa độ (x,y) thì f(x,y) = 1 nếu (x,y) thuộc R, và f(x,y) = 0 nếu (x,y) không thuộc R", "is_correct": false, "images": []}, {"text": "Thường biểu diễn cho vùng ảnh và áp dụng các loại ảnh ảnh nghị phân, ảnh xám, ảnh màu.", "is_correct": true, "images": []}]}, {"question_num": 129, "question": "Câu 129: Trong phương pháp Histogram Matching, việc tính toán nào sau đây là không cần thiết:", "images": [], "options": [{"text": "Tính tổng xác suất xuất hiện của các mức xám trong ảnh", "is_correct": true, "images": []}, {"text": "Xác định các xác suất xuất hiện của các mức xám trong ảnh", "is_correct": false, "images": []}, {"text": "Tính Histogram Equalization của ảnh đầu vào", "is_correct": false, "images": []}, {"text": "Tính Histogram Equalization của ảnh cần đạt được", "is_correct": false, "images": []}]}, {"question_num": 130, "question": "Câu 130: Ứng dụng nào sau đây trong việc nâng cao chất lượng ảnh không phải là toán tử điểm?", "images": [], "options": [{"text": "Tăng độ tương phản", "is_correct": false, "images": []}, {"text": "Biến đổi âm bản", "is_correct": false, "images": []}, {"text": "Tách nhiễu, phân ngưỡng", "is_correct": false, "images": []}, {"text": "làm mượt ảnh", "is_correct": true, "images": []}]}, {"question_num": 131, "question": "Câu 131: Đối với phương pháp mã hóa Huffman phát biểu nào sau đây là chính xác nhất?", "images": [], "options": [{"text": "Các dãy kí tự có tần số cao được thay đổi bằng một mã nhị phân với số bit lớn", "is_correct": false, "images": []}, {"text": "Các dãy có tần số thấp được mã hóa bởi từ mã có ít bit hơn", "is_correct": true, "images": []}, {"text": "Là phương pháp nén không mất thông tin.", "is_correct": false, "images": []}, {"text": "Tỉ số nén của phương pháp Huffman bao giờ cũng nhỏ hơn phương pháp Shano – Fano", "is_correct": false, "images": []}]}, {"question_num": 132, "question": "Câu 132: Phát biểu nào sau đây chưa chính xác đối với modules phân vùng ảnh?", "images": [], "options": [{"text": "Kết quả nhận dạng của xử lý ảnh phụ thuộc rất nhiều vào kết quả của việc phân vùng ảnh", "is_correct": true, "images": []}, {"text": "Đây là phần dễ làm nhất trong các modules nhận dạng và xử lý ảnh.", "is_correct": false, "images": []}, {"text": "Phân vùng ảnh là tách ảnh đầu thành các vùng thành phần để biểu diễn phân tích và nhận dạng ảnh", "is_correct": false, "images": []}]}, {"question_num": 133, "question": "Câu 133: Trong việc nén dữ liệu, chủ yếu các phương pháp được sử dụng nhằm để loại bỏ những dữ liệu dư thừa. Có bao nhiêu kiểu dữ liệu dư thừa phổ biến nhất", "images": [], "options": [{"text": "4", "is_correct": false, "images": []}, {"text": "5", "is_correct": false, "images": []}, {"text": "3", "is_correct": true, "images": []}, {"text": "6", "is_correct": false, "images": []}]}, {"question_num": 134, "question": "Câu 134: Hai điểm được gọi là liên kết với nhau nếu:", "images": [], "options": [{"text": "Có cùng độ sáng", "is_correct": false, "images": []}, {"text": "Cả 3 đáp án trên", "is_correct": false, "images": []}, {"text": "Là lân cận của nhau", "is_correct": false, "images": []}, {"text": "Là lân cận của nhau và mức xám của chúng tương tự nhau", "is_correct": true, "images": []}]}, {"question_num": 135, "question": "Câu 135: Trong quá trình lấy mẫu, phát biểu nào sau đây là sai?", "images": [], "options": [{"text": "Cách thể hiện mẫu liên quan đến độ đo được dùng trong miễn rời rạc", "is_correct": true, "images": []}, {"text": "Lấy mẫu là một quá trình, qua đó ảnh được tạo nên trên một vùng có tính liên tục được chuyển thành các giá trị rời rạc theo tọa độ thực", "is_correct": false, "images": []}, {"text": "Khoảng lấy mẫu được đảm bảo nhờ lý thuyết mẫu của Shannon", "is_correct": false, "images": []}, {"text": "Quá trình lấy mẫu gồm 2 lựa chọn: Khoảng lấy mẫu và cách thể hiện dạng mẫu", "is_correct": false, "images": []}]}, {"question_num": 136, "question": "Câu 136: Kỹ thuật nén nào phụ thuộc vào sự lặp lại của các ký tự", "images": [], "options": [{"text": "Mã hóa loạt dài", "is_correct": false, "images": []}, {"text": "Huffman", "is_correct": false, "images": []}, {"text": "Shanno-Fano", "is_correct": false, "images": []}, {"text": "Tất cả các đáp án", "is_correct": true, "images": []}]}, {"question_num": 137, "question": "Câu 137: Phát biểu nào sau đây về ảnh số là sai", "images": [], "options": [{"text": "Giá trị của phần tử trong ma trận biểu thị cường độ sáng ( mức xám) tương ứng của điểm ảnh trong ảnh số", "is_correct": false, "images": []}, {"text": "Điểm ảnh có mức xám nằm trong đoạn [L(min),L(max)]", "is_correct": false, "images": []}, {"text": "Điểm ảnh là một phần tử nhỏ nhất trong ảnh số tại tọa độ (x,y). Một điểm ảnh trong ảnh số tưng ứng với một phần tử trong ma trận tại hàng x cột y", "is_correct": false, "images": []}, {"text": "L(min) tương ứng với màu trắng, L(max) tương ứng với màu đen", "is_correct": true, "images": []}]}, {"question_num": 138, "question": "Câu 138: Trong một dãy ký tự, có một số ký tự có tần suất xuất hiện nhiều hơn so với các dãy khác. Ta có thể sử dụng phương pháp mã hóa nào sau đây?", "images": [], "options": [{"text": "Huffman", "is_correct": true, "images": []}, {"text": "Mã hóa loạt dài và Huffman", "is_correct": false, "images": []}, {"text": "Mã hóa loạt dài", "is_correct": false, "images": []}, {"text": "LZ77, LZ78", "is_correct": false, "images": []}]}, {"question_num": 139, "question": "Câu 139: Phát biểu nào sau đây là chính xác đối với liên kết m (liên kết hỗn hợp)?", "images": [], "options": [{"text": "Hai điểm ảnh p và q với các giá trị của nó nằm trong V được gọi là liên kết hỗn hợp nếu q nằm trong ND(p) và không có điểm ảnh nào nằm trong N4(p) ∩ N4(q) có giá trị trong V", "is_correct": true, "images": []}, {"text": "Hai điểm ảnh p và q với các giá trị của nó nằm trong V được gọi là liên kết hỗn hợp nếu q nằm trong N8(p)", "is_correct": false, "images": []}, {"text": "Hai điểm ảnh p và q với các giá trị của nó nằm trong V được gọi là liên kết hỗn hợp nếu q nằm trong ND(p)", "is_correct": false, "images": []}, {"text": "Hai điểm ảnh p và q với các giá trị của nó nằm trong V được gọi là liên kết hỗn hợp nếu q nằm trong N4(p)", "is_correct": false, "images": []}]}, {"question_num": 140, "question": "Câu 140: Trong phép co ảnh, phép toán sử dụng là:", "images": [], "options": [{"text": "OR", "is_correct": false, "images": []}, {"text": "AND", "is_correct": true, "images": []}, {"text": "XORNOT", "is_correct": false, "images": []}]}, {"question_num": 141, "question": "Câu 141: Tính hiệu quả của một phương pháp nén phụ thuộc vào các thông số nào sau đây?", "images": [], "options": [{"text": "Chi phí thời gian, không gian, độ phức tạp của thuật toán, tỷ lệ nén", "is_correct": true, "images": []}, {"text": "Tỉ lệ nén", "is_correct": false, "images": []}, {"text": "Chi phí thời gian, không gian", "is_correct": false, "images": []}, {"text": "Độ phức tạp của thuật toán", "is_correct": false, "images": []}]}, {"question_num": 142, "question": "Câu 142: Trong phép co ảnh nhị phân, phát biểu nào sau đây là sai?", "images": [], "options": [{"text": "Xóa cầu nối", "is_correct": false, "images": []}, {"text": "Thu nhỏ hình ảnh", "is_correct": true, "images": []}, {"text": "Xóa phần nhô ra", "is_correct": false, "images": []}, {"text": "Lấp đầy khoảng trống", "is_correct": false, "images": []}]}, {"question_num": 143, "question": "Câu 143: Phát biểu nào sau đây trong biểu diễn và mô tả ảnh là sai?", "images": [], "options": [{"text": "Thông thường các ảnh thô đó được đặc tả (biểu diễn) theo các đặc điểm của ảnh", "is_correct": false, "images": []}, {"text": "Nếu lưu trữ ảnh trực tiếp từ các file thô, đòi hỏi dung lượng bộ nhớ cực lớn", "is_correct": false, "images": []}, {"text": "Trong quá trình miêu tả ảnh thì chủ yếu sử dụng biên ảnh và vùng ảnh có thể biểu diễn lại ảnh", "is_correct": false, "images": []}, {"text": "Một số phương pháp thường dùng: Mã hóa Huffman, Mã hóa loạt dài…", "is_correct": true, "images": []}]}, {"question_num": 144, "question": "144. Phép xử lý nhằm tăng cường các chi tiết ảnh trong vùng khó quan sát ?", "images": [], "options": [{"text": "Sử dụng hàm mũ", "is_correct": false, "images": []}, {"text": "Cân bằng histogram", "is_correct": false, "images": []}, {"text": "Cân bằng sáng", "is_correct": false, "images": []}, {"text": "Lấy âm bản", "is_correct": true, "images": []}]}, {"question_num": 145, "question": "145. Phép lọc Bilateral có nhược điểm", "images": [], "options": [{"text": "Cải thiện ảnh kém so với phép lọc box filter", "is_correct": false, "images": []}, {"text": "Cải thiện ảnh kém so với phép lọc trung vị", "is_correct": false, "images": []}, {"text": "Hiệu quả giảm nhiễu thấp", "is_correct": false, "images": []}, {"text": "Thực hiện số lượng lớn phép tính", "is_correct": true, "images": []}]}, {"question_num": 146, "question": "146. Tách ngưỡng nhị phân nghĩa là :", "images": [], "options": [{"text": "Chuyển ảnh thành ảnh nhị phân", "is_correct": false, "images": []}, {"text": "Chọn một ngưỡng T, nếu giá trị các điểm ảnh lớn hơn T thì gần bằng 1, ngược lại gần bằng 0", "is_correct": true, "images": []}, {"text": "Chọn một ngưỡng T và loại bỏ các điểm ảnh lớn hơn T", "is_correct": false, "images": []}, {"text": "Chuyển ảnh thành ảnh xám", "is_correct": false, "images": []}]}, {"question_num": 147, "question": "8. Cho một ảnh có số các giá trị điểm ảnh nằm trong vùng từ 0-9 và có kích thước 4x4 như sau : ​[0 1 7 6 ; 8 6 2 0 ; 9 8 7 4 ; 0 6 3 2]​Vector histogram của ảnh sẽ là :", "images": [], "options": [{"text": "[3 1 2 3 1 0 3 2 2 1]", "is_correct": false, "images": []}, {"text": "[3 1 2 1 1 0 3 2 2 1]", "is_correct": true, "images": []}, {"text": "[3 1 2 4 1 0 3 2 2 1]", "is_correct": false, "images": []}, {"text": "[3 1 2 2 1 0 3 2 2 1]", "is_correct": false, "images": []}]}, {"question_num": 148, "question": "9. Nhận dạng khá phổ biến hiện nay đang được áp dụng trong đời sống :", "images": [], "options": [{"text": "Nhận dạng vân tay", "is_correct": false, "images": []}, {"text": "Nhận dạng mã vạch", "is_correct": false, "images": []}, {"text": "Tất cả đều đúng", "is_correct": true, "images": []}, {"text": "Nhận dạng ký tự", "is_correct": false, "images": []}, {"text": "Nhận dạng mặt người", "is_correct": false, "images": []}]}, {"question_num": 149, "question": "10. Cho ảnh với mẫu nhân chập T như sau khi đó kết quả nhân chập cho vùng xanh đậm có giá trị bằng : ​(Gợi ý : Nhân từng mức xám của ảnh tương ứng với nhân, sau đó cộng hết lại)", "images": ["images/image6.png"], "options": [{"text": "1", "is_correct": false, "images": []}, {"text": "5", "is_correct": true, "images": []}, {"text": "3", "is_correct": false, "images": []}]}, {"question_num": 150, "question": "11. Các nhân dùng để lấy đạo hàm ảnh là", "images": [], "options": [{"text": "Các bộ lọc làm mịn ảnh", "is_correct": false, "images": []}, {"text": "Các bộ lọc làm sắc nét ảnh theo một hướng xác định", "is_correct": true, "images": []}, {"text": "Các bộ lọc thông cao", "is_correct": false, "images": []}, {"text": "Các bộ lọc thông thấp", "is_correct": false, "images": []}]}, {"question_num": 151, "question": "12. Đâu không phải là định dạng ảnh phổ biến để thực hiện các thao tác xử lý ảnh trong học phần này", "images": [], "options": [{"text": "PNG", "is_correct": false, "images": []}, {"text": "BMP", "is_correct": false, "images": []}, {"text": "TIFF", "is_correct": true, "images": []}, {"text": "JPEG", "is_correct": false, "images": []}]}, {"question_num": 152, "question": "13. Xử lý ảnh chuyên nghiên cứu về:", "images": [], "options": [{"text": "Biến đổi và cải thiện thông tin ảnh", "is_correct": false, "images": []}, {"text": "Chuyên nghiên cứu lưu trữ ảnh", "is_correct": false, "images": []}, {"text": "Tất cả đều đúng", "is_correct": true, "images": []}, {"text": "Chuyên nghiên cứu số hóa ảnh", "is_correct": false, "images": []}]}, {"question_num": 153, "question": "14. Mã chạy loạt (Run length code) là mã dùng để", "images": [], "options": [{"text": "Nén ảnh", "is_correct": false, "images": []}, {"text": "Biểu diễn ảnh", "is_correct": true, "images": []}, {"text": "Chỉnh sửa ảnh", "is_correct": false, "images": []}, {"text": "Nhận dạng ảnh", "is_correct": false, "images": []}]}, {"question_num": 154, "question": "17. Cho ảnh xám kích thước 3x3 :", "images": [], "options": [{"text": "[155 75 242 ; 88 247 231 ; 212 185 45]", "is_correct": false, "images": []}, {"text": "[115 75 244 ; 88 247 231 ; 212 185 45]", "is_correct": false, "images": []}, {"text": "[155 75 244 ; 88 247 231 ; 212 165 45]", "is_correct": false, "images": []}, {"text": "[155 75 244 ; 88 247 231 ; 212 185 45]", "is_correct": true, "images": []}]}, {"question_num": 155, "question": "18. Biến đổi Fourier có thể dùng để :", "images": [], "options": [{"text": "Biểu diễn ảnh bởi các sóng sin và cosin", "is_correct": false, "images": []}, {"text": "Tách ảnh số thành nhiều thành phần ở các hướng và tỉ lệ khác nhau.", "is_correct": false, "images": []}, {"text": "Cài đặt thuật toán nhân chập hiệu quả.", "is_correct": true, "images": []}, {"text": "Nén ảnh.", "is_correct": false, "images": []}]}, {"question_num": 156, "question": "20. Trong một ảnh mức xám là gì?", "images": [], "options": [{"text": "Là một phần tử của ảnh số tại toạ độ (x, y) với màu nhất định trong ảnh raster (ảnh bitmap)", "is_correct": false, "images": []}, {"text": "Là số bit của điểm ảnh", "is_correct": false, "images": []}, {"text": "Là độ phân giải của ảnh", "is_correct": false, "images": []}, {"text": "Là kết quả của sự biến đổi tương ứng 1 giá trị độ sáng của 1 điểm ảnh với 1 giá trị nguyên dương ( * )", "is_correct": true, "images": []}]}, {"question_num": 157, "question": "23. Cho ảnh I có vùng giá trị như trên ảnh", "images": ["images/image7.png"], "options": [{"text": "0", "is_correct": false, "images": []}, {"text": "3", "is_correct": false, "images": []}, {"text": "1", "is_correct": true, "images": []}, {"text": "2", "is_correct": false, "images": []}]}, {"question_num": 158, "question": "28. Một hệ màu gồm mấy thành phần cơ bản ?", "images": [], "options": [{"text": "2", "is_correct": false, "images": []}, {"text": "4", "is_correct": false, "images": []}, {"text": "5", "is_correct": false, "images": []}, {"text": "3", "is_correct": true, "images": []}]}, {"question_num": 159, "question": "29. Mục đích của phép Close?", "images": [], "options": [{"text": "Để loại bỏ các cầu nối, các cành hoặc phần nhô ra của đối tượng trong ảnh.", "is_correct": false, "images": []}, {"text": "Để co đối tượng nhỏ hơn gấp đôi đối tượng so với phép co", "is_correct": false, "images": []}, {"text": "Để lấp đầy các lỗ hổng, các khe hở nhỏ của đối tượng trong ảnh", "is_correct": true, "images": []}, {"text": "Để mở rộng vùng đối tượng gấp đôi đối tượng so với phép Giãn", "is_correct": false, "images": []}]}, {"question_num": 160, "question": "33. Hình ảnh sau là một bộ lọc : ​", "images": ["images/image8.png"], "options": [{"text": "Thông cao Ideal", "is_correct": false, "images": []}, {"text": "Thông thấp Gaussian", "is_correct": true, "images": []}, {"text": "Thông thấp Butterworth", "is_correct": false, "images": []}, {"text": "Thông thấp Ideal", "is_correct": false, "images": []}]}, {"question_num": 161, "question": "35. Để lấy đường bao của một đối tượng trong ảnh", "images": [], "options": [{"text": "Ta lấy tổng của ảnh với kết quả của phép giãn ảnh", "is_correct": false, "images": []}, {"text": "Ta lấy hiệu của ảnh với kết quả của phép co ảnh", "is_correct": true, "images": []}, {"text": "Ta lấy tổng của ảnh với kết quả của phép co ảnh", "is_correct": false, "images": []}, {"text": "Ta lấy hiệu của ảnh với kết quả của phép giãn ảnh", "is_correct": false, "images": []}]}, {"question_num": 162, "question": "36. Biên là gì ?", "images": [], "options": [{"text": "Tập hợp các điểm biên là đường biên bao quanh đối tượng", "is_correct": false, "images": []}, {"text": "Nếu là ảnh đen trắng thì điểm biên là điểm đen có ít nhất 1 điểm trắng bên cạnh", "is_correct": false, "images": []}, {"text": "Thay đổi đột ngột trong mức xám", "is_correct": false, "images": []}, {"text": "Tất cả đều đúng", "is_correct": true, "images": []}]}, {"question_num": 163, "question": "37. Cho ảnh xám kích thước 3x3 :", "images": [], "options": [{"text": "[53 246 82 ; 10 38 62 ; 88 19 65]", "is_correct": false, "images": []}, {"text": "[53 246 82 ; 10 38 66 ; 88 16 65]", "is_correct": false, "images": []}, {"text": "[53 246 132 ; 10 38 62 ; 88 16 65]", "is_correct": true, "images": []}, {"text": "[53 264 82 ; 10 38 62 ; 88 16 65]", "is_correct": false, "images": []}]}, {"question_num": 164, "question": "38. Bộ lọc NonLocalMean nhằm", "images": [], "options": [{"text": "Làm ảnh sắc nét hơn", "is_correct": false, "images": []}, {"text": "Không có đáp án đúng", "is_correct": false, "images": []}, {"text": "Loại bỏ các nhiễu nhưng vẫn giữ lại các đặc trưng sắc nét của ảnh", "is_correct": true, "images": []}, {"text": "Loại bỏ hoàn toàn nhiễu trong ảnh", "is_correct": false, "images": []}]}, {"question_num": 165, "question": "40. Với mỗi phép lọc, có ba bộ lọc tần số phổ biến có thể sử dụng là :", "images": [], "options": [{"text": "Butterworth, Gaussian và Median", "is_correct": false, "images": []}, {"text": "Ideal, Butterworth và Gaussian", "is_correct": true, "images": []}, {"text": "Ideal, Gaussian và Median", "is_correct": false, "images": []}, {"text": "Ideal, Butterworth và Median", "is_correct": false, "images": []}]}, {"question_num": 166, "question": "41. Ảnh xám là", "images": [], "options": [{"text": "Ảnh một kenh màu với độ sâu màu 8 bit", "is_correct": true, "images": []}, {"text": "Ảnh một kenh màu với độ sâu màu 2 bit", "is_correct": false, "images": []}, {"text": "Ảnh một kenh màu với độ sâu màu 16 bit", "is_correct": false, "images": []}, {"text": "Ảnh một kenh màu với độ sâu màu 4 bit", "is_correct": false, "images": []}]}, {"question_num": 167, "question": "42. Cho một nhị phân được biểu diễn bởi ma trận 5x5 sau: [1 0 0 1 0;0 1 1 1 0;0 0 1 0 0;0 0 1 1 0;1 0 0 0 0]. Kết quả của phép giãn ảnh với phần tử cấu trúc Diamond là:", "images": [], "options": [{"text": "[1 1 1 0 1;1 1 1 1 1;0 1 0 1 0;1 1 1 1 1;1 1 1 1 0]", "is_correct": false, "images": []}, {"text": "[1 1 1 1 1;1 0 1 1 1;0 1 1 1 0;1 1 1 0 1;1 1 1 1 0]", "is_correct": false, "images": []}, {"text": "[1 1 1 1 1;1 1 1 1 1;0 1 1 0 0;1 1 0 1 1;1 1 0 1 0]", "is_correct": false, "images": []}, {"text": "[1 1 1 1 1;1 1 1 1 1;0 1 1 1 0;1 1 1 1 1;1 1 1 1 0]", "is_correct": true, "images": []}]}, {"question_num": 168, "question": "45. Trong các mẫu nhân chập sau đâu là mẫu nhân chập của kỹ thuật PREWITT", "images": [], "options": [{"text": "", "is_correct": true, "images": ["images/image9.png"]}, {"text": "", "is_correct": false, "images": ["images/image10.png"]}, {"text": "", "is_correct": false, "images": ["images/image21.png"]}, {"text": "", "is_correct": false, "images": ["images/image24.png"]}]}, {"question_num": 169, "question": "47. Phép Open là phép biến đổi dựa trên?", "images": [], "options": [{"text": "Giãn ảnh rồi co ảnh", "is_correct": false, "images": []}, {"text": "Giãn ảnh liên tiếp", "is_correct": false, "images": []}, {"text": "Co ảnh liên tiếp", "is_correct": false, "images": []}, {"text": "Co ảnh rồi giãn ảnh", "is_correct": true, "images": []}]}, {"question_num": 170, "question": "50. Một ảnh xám có độ phân giải 800x600 sẽ cần vùng nhớ có dung lượng là bao nhiêu để lưu trữ dữ liệu ảnh ở dạng không nén?", "images": [], "options": [{"text": "480 KB", "is_correct": false, "images": []}, {"text": "0.46 MB", "is_correct": true, "images": []}, {"text": "800 KB", "is_correct": false, "images": []}, {"text": "0.45 MB", "is_correct": false, "images": []}]}, {"question_num": 171, "question": "53. Trong các mẫu nhân chập sau đâu là mẫu nhân chập của kỹ thuật GRADIENT", "images": [], "options": [{"text": "", "is_correct": true, "images": ["images/image10.png"]}, {"text": "", "is_correct": false, "images": ["images/image24.png"]}, {"text": "", "is_correct": false, "images": ["images/image9.png"]}, {"text": "", "is_correct": false, "images": ["images/image21.png"]}]}, {"question_num": 172, "question": "54. Ảnh sáng là ảnh :", "images": [], "options": [{"text": "Độ tương phản cao và mức xám gần với 0", "is_correct": false, "images": []}, {"text": "Độ tương phản thấp và các mức xám gần với 0", "is_correct": false, "images": []}, {"text": "Độ tương phản thấp và các mức xám gần với 255", "is_correct": false, "images": []}, {"text": "Độ tương phản cao và các mức xám gần với 255", "is_correct": true, "images": []}]}, {"question_num": 173, "question": "56. Một ảnh xám có độ phân giải 800x600 sẽ có kích thước là:", "images": [], "options": [{"text": "0.469 Mb", "is_correct": true, "images": []}, {"text": "468.8 Kb", "is_correct": false, "images": []}, {"text": "0.469 MB", "is_correct": false, "images": []}, {"text": "468.8 KB", "is_correct": false, "images": []}]}, {"question_num": 174, "question": "61. Ảnh I được gọi là cân bằng “lý tưởng” nếu với mọi mức xám g, g’ ta có:", "images": [], "options": [{"text": "h(g) < h(g’)", "is_correct": false, "images": []}, {"text": "h(g) > h(g’)", "is_correct": false, "images": []}, {"text": "h(g) = h(g’)", "is_correct": true, "images": []}, {"text": "h(g) <> h(g’)", "is_correct": false, "images": []}]}, {"question_num": 175, "question": "62. Cho một ảnh số có các giá trị điểm ảnh nằm trong vùng 0-9 và có kích thước 4x4 như sau : ​[8 1 4 6 ; 7 6 3 0 ; 5 8 9 4 ; 2 1 7 5]", "images": [], "options": [{"text": "[1 2 2 1 2 2 2 2 2 1]", "is_correct": false, "images": []}, {"text": "[1 2 1 1 2 2 2 2 1 1]", "is_correct": false, "images": []}, {"text": "[1 2 1 1 2 2 3 2 2 1]", "is_correct": false, "images": []}, {"text": "[1 2 1 1 2 2 2 2 2 1]", "is_correct": true, "images": []}]}, {"question_num": 176, "question": "63. Mục đích của phép Open?", "images": [], "options": [{"text": "Để co đối tượng nhỏ hơn gấp đôi đối tượng so với phép co", "is_correct": false, "images": []}, {"text": "Để mở rộng vùng đối tượng gấp đôi đối tượng so với phép Giãn", "is_correct": false, "images": []}, {"text": "Để loại bỏ các cầu nối, các cành hoặc phần nhô ra của đối tượng trong ảnh.", "is_correct": true, "images": []}, {"text": "Để lấp đầy các lỗ hổng, các khe hở nhỏ của đối tượng trong ảnh", "is_correct": false, "images": []}]}, {"question_num": 177, "question": "64. Toán tử Laplacian :", "images": [], "options": [{"text": "Giảm nhiễu ảnh", "is_correct": false, "images": []}, {"text": "Gây mờ ảnh", "is_correct": false, "images": []}, {"text": "Tăng cường chi tiết ảnh", "is_correct": true, "images": []}, {"text": "Cho tốc độ tính toán chậm", "is_correct": false, "images": []}]}, {"question_num": 178, "question": "65. Nếu giá trị ảnh quá lớn thì để biểu diễn sẽ cần biến đổi :", "images": [], "options": [{"text": "Tăng độ tương phản", "is_correct": false, "images": []}, {"text": "Cân bằng histogram", "is_correct": false, "images": []}, {"text": "Hàm mũ", "is_correct": false, "images": []}, {"text": "Hàm Logarit", "is_correct": true, "images": []}]}, {"question_num": 179, "question": "68. Cho ảnh xám kích thước 4x4 ​I = [208 161 245 245 ; 231 24 247 124 ; 32 71 40 204 ; 233 140 248 36]​Kết quả của phép lọc trung bình với nhân kích thước 3x3 sẽ là :", "images": [], "options": [{"text": "[0 0 0 0 ; 0 140 151 0 ; 0 141 116 0 ; 0 0 0 0]", "is_correct": false, "images": []}, {"text": "[0 0 0 0 ; 0 140 151 0 ; 0 141 126 0 ; 0 0 0 0]", "is_correct": true, "images": []}, {"text": "[0 0 0 0 ; 0 138 151 0 ; 0 141 126 0 ; 0 0 0 0]", "is_correct": false, "images": []}, {"text": "[0 0 0 0 ; 0 140 131 0 ; 0 141 126 0 ; 0 0 0 0]", "is_correct": false, "images": []}]}, {"question_num": 180, "question": "69. Đây là tín hiệu gốc và tín hiệu lọc", "images": ["images/image29.png"], "options": [{"text": "Thông giải", "is_correct": false, "images": []}, {"text": "Thông chặn", "is_correct": true, "images": []}, {"text": "Thông thấp", "is_correct": false, "images": []}, {"text": "Thông cao", "is_correct": false, "images": []}]}, {"question_num": 181, "question": "70. Dò biên sử dụng quy hoạch động, có thuật toán như thế nào?", "images": [], "options": [{"text": "2 bước: 1.Dự báo và xác định điểm biên tiếp theo 2.Lặp bước 2 cho đến khi gặp điểm xuất phát", "is_correct": false, "images": []}, {"text": "2 bước: 1.Xác định điểm xuất phát 2.Dự báo và xác định điểm biên tiếp theo", "is_correct": false, "images": []}, {"text": "3 bước: 1.Xác định điểm xuất phát 2.Dự báo và xác định điểm biên tiếp theo 3.Lặp bước 2 cho đến khi gặp điểm xuất phát", "is_correct": true, "images": []}, {"text": "3 bước: 1.Xác định điểm kết thúc 2.Dự báo và xác định điểm biên tiếp theo 3.Lặp bước 2 cho đến khi không thể xác định điểm biên tiếp theo", "is_correct": false, "images": []}]}, {"question_num": 182, "question": "72. Cho ảnh xám kích thước 3x3 :", "images": [], "options": [{"text": "[78 247 60 ; 174 143 52 ; 12 158 218]", "is_correct": false, "images": []}, {"text": "[78 247 60 ; 164 143 52 ; 12 158 208]", "is_correct": false, "images": []}, {"text": "[79 247 60 ; 174 143 52 ; 12 158 208]", "is_correct": false, "images": []}, {"text": "[78 247 60 ; 174 143 52 ; 12 158 208]", "is_correct": true, "images": []}]}, {"question_num": 183, "question": "75. Một chương trình xử lý ảnh viết bằng ngôn ngữ nào sẽ chạy chậm nhất?", "images": [], "options": [{"text": "C++", "is_correct": false, "images": []}, {"text": "C", "is_correct": false, "images": []}, {"text": "Python", "is_correct": false, "images": []}, {"text": "JavaScript", "is_correct": true, "images": []}]}, {"question_num": 184, "question": "79. Ý nghĩa của kỹ thuật bó cụm:", "images": [], "options": [{"text": "Nhằm giảm bớt độ tối của ảnh", "is_correct": false, "images": []}, {"text": "Nhằm giảm bớt độ sáng của ảnh", "is_correct": false, "images": []}, {"text": "Nhằm giảm bớt số bước tính toán trong quá trình xử lý", "is_correct": false, "images": []}, {"text": "Nhằm giảm bớt số mức xám của ảnh bằng cách nhóm lại số mức xám gần nhau thành 1 nhóm", "is_correct": true, "images": []}]}, {"question_num": 185, "question": "82. Phép lọc ảnh trong miền tần số :", "images": [], "options": [{"text": "Rất hiệu quả khi lọc các nhiễu định kỳ", "is_correct": true, "images": []}, {"text": "Rất hiệu quả khi lọc các nhiễu muối tiêu", "is_correct": false, "images": []}, {"text": "Không có đáp án đúng", "is_correct": false, "images": []}, {"text": "Rất hiệu quả khi lọc các nhiễu xung", "is_correct": false, "images": []}]}, {"question_num": 186, "question": "83. (**)Subimage trong phép lọc không gian sử dụng tích chập (convolution) được gọi là?", "images": [], "options": [{"text": "Biến đổi tần suất", "is_correct": false, "images": []}, {"text": "Thống kê tần suất", "is_correct": false, "images": []}, {"text": "Filter (bộ lọc) hay mẫu chập", "is_correct": true, "images": []}, {"text": "Một ảnh nhỏ cắt ra từ phép tích chập", "is_correct": false, "images": []}]}, {"question_num": 187, "question": "84. Cho ảnh I có giá trị như sau : [1 2 0 ; 1 0 0 ; 2 2 1]​Mẫu nhân chập T là : [1 0 0 ; 0 1 1 ; 1 0 1]​Kết quả nhân chập sẽ bằng :", "images": [], "options": [{"text": "4", "is_correct": true, "images": []}, {"text": "5", "is_correct": false, "images": []}, {"text": "3", "is_correct": false, "images": []}, {"text": "9", "is_correct": false, "images": []}]}, {"question_num": 188, "question": "86. Hiện tượng Ringing Effect trong lọc tần số là", "images": [], "options": [{"text": "Hiện tượng ảnh bị tạo thành hình tròn", "is_correct": false, "images": []}, {"text": "Hiện tượng xuất hiện các vùng ảnh có tần số gắn với tần số bị loại bỏ", "is_correct": true, "images": []}, {"text": "Xuất hiện các vòng tròn", "is_correct": false, "images": []}, {"text": "Xuất hiện các vùng ảnh mới", "is_correct": false, "images": []}]}, {"question_num": 189, "question": "87. Ứng dụng chủ yếu của phép lọc thông thấp là (Phép lọc thông thấp được ứng dụng chủ yếu là)", "images": [], "options": [{"text": "Làm sắc nét ảnh", "is_correct": false, "images": []}, {"text": "Khôi phục ảnh", "is_correct": false, "images": []}, {"text": "Không có đáp án đúng", "is_correct": false, "images": []}, {"text": "Lọc nhiễu", "is_correct": true, "images": []}]}, {"question_num": 190, "question": "88. Đâu là khái niệm cho biểu diễn bằng mã tứ phân (Quad - Tree Code)?", "images": [], "options": [{"text": "Vùng ảnh đầu tiên được chia làm bốn phần thường là bằng nhau. Nếu mỗi vùng đã đồng nhất (chứa toàn điểm đen (1) hay trắng (0)), thì gán cho vùng đó một mã và không chia tiếp. Các vùng không đồng nhất được chia tiếp làm bốn phần theo thủ tục trên cho đến khi tất cả các vùng đều đồng nhất (*)", "is_correct": true, "images": []}, {"text": "Phương pháp này thường biểu diễn cho vùng ảnh và áp dụng cho ảnh nhị phân. Một vùng ảnh R có thể mã hoá đơn giản nhờ một ma trận nhị phân: - U(m ,n ) = 1 nếu (m, n) thuộc R - U( m,n) = 0 nếu (m, n) không thuộc R Trong đó: U(m, n) là hàm mô tả mức xám ảnh tại tọa độ (m, n)", "is_correct": false, "images": []}, {"text": "Phương pháp này thường dùng để biểu diễn đường biên ảnh. Một đường bất kỳ được chia thành các đoạn nhỏ. Nối các điểm chia, ta có các đoạn thẳng kế tiếp được gán hướng cho đoạn thẳng đó tạo thành một dây xích gồm các đoạn. Các hướng có thể chọn 4, 8, 12, 24,... mỗi hướng được mã hoá theo số thập phân hoặc số nhị phân thành mã của hướng.", "is_correct": false, "images": []}]}, {"question_num": 191, "question": "89. Ảnh 32 bit màu là ảnh ? ​ ​", "images": [], "options": [{"text": "Sử dụng 4 kênh màu", "is_correct": true, "images": []}, {"text": "Sử dụng 3 kênh màu", "is_correct": false, "images": []}, {"text": "Không có ảnh màu như vậy", "is_correct": false, "images": []}, {"text": "Có giá trị màu tương ứng là 32", "is_correct": false, "images": []}]}, {"question_num": 192, "question": "90. Phép Close là phép biến đổi dựa trên?", "images": [], "options": [{"text": "Co ảnh rồi giãn ảnh", "is_correct": false, "images": []}, {"text": "Giãn ảnh rồi co ảnh", "is_correct": true, "images": []}, {"text": "Co ảnh liên tiếp", "is_correct": false, "images": []}, {"text": "Giãn ảnh liên tiếp", "is_correct": false, "images": []}]}, {"question_num": 193, "question": "91. (**)Trong quá trình phát hiện biên sau thì làm nổi biên có vai trò gì", "images": ["images/image22.png"], "options": [{"text": "Làm mịn các vùng biên", "is_correct": false, "images": []}, {"text": "Làm nổi các biên của ảnh", "is_correct": false, "images": []}, {"text": "Làm nổi các trơn vùng biên", "is_correct": false, "images": []}, {"text": "Làm nổi các vùng biên", "is_correct": true, "images": []}]}, {"question_num": 194, "question": "93. Bộ lọc nào cần thực hiện sắp xếp", "images": [], "options": [{"text": "Bộ lọc Gaussian", "is_correct": false, "images": []}, {"text": "Bộ lọc trung vị", "is_correct": true, "images": []}, {"text": "Bộ lọc trung bình", "is_correct": false, "images": []}, {"text": "Ảnh một kenh màu với độ sâu màu 4 bit", "is_correct": false, "images": []}]}, {"question_num": 195, "question": "94. Lọc ảnh trong miền tần số dựa trên (Trong miền tần số lọc ảnh dựa trên)", "images": [], "options": [{"text": "Biến đổi Fourier rời rạc", "is_correct": true, "images": []}, {"text": "Sắp xếp", "is_correct": false, "images": []}, {"text": "Tìm cực trị", "is_correct": false, "images": []}, {"text": "Phép nhân chập", "is_correct": false, "images": []}]}, {"question_num": 196, "question": "95. Cho ảnh số và ảnh sau biến đổi : Phép biến đổi trên có thể là :", "images": ["images/image23.png"], "options": [{"text": "Tách ngưỡng", "is_correct": true, "images": []}, {"text": "Biến đổi Power-law", "is_correct": false, "images": []}, {"text": "Biến đổi logarit", "is_correct": false, "images": []}, {"text": "Tăng tương phản", "is_correct": false, "images": []}]}, {"question_num": 197, "question": "97. Đâu là ký hiệu của phép đóng ảnh (Close)?", "images": [], "options": [{"text": "A = B", "is_correct": false, "images": []}, {"text": "A ⊕ B", "is_correct": false, "images": []}, {"text": "A  B", "is_correct": true, "images": []}, {"text": "A ⊖ B", "is_correct": false, "images": []}]}, {"question_num": 198, "question": "103. Số hóa là tiến trình :", "images": [], "options": [{"text": "Biến đổi tín hiệu liên tục thành tín hiệu rời rạc", "is_correct": true, "images": []}, {"text": "Biến đổi ảnh đen trắng thành ảnh màu", "is_correct": false, "images": []}, {"text": "Biến đổi tín hiệu rời rạc thành tín hiệu liên tục", "is_correct": false, "images": []}, {"text": "Biến đổi ảnh đơn mức xám thành ảnh đa mức xám", "is_correct": false, "images": []}]}, {"question_num": 199, "question": "104. ND(P) là ký hiệu chỉ", "images": [], "options": [{"text": "Bốn điểm cách đều một điểm ảnh", "is_correct": false, "images": []}, {"text": "Bốn điểm thẳng hàng với một điểm ảnh", "is_correct": false, "images": []}, {"text": "Bốn điểm lân cận theo hai đường chéo chính của một điểm ảnh", "is_correct": true, "images": []}, {"text": "Bốn điểm lân cận theo chiều dọc và ngang của một điểm ảnh", "is_correct": false, "images": []}]}, {"question_num": 200, "question": "105. Trong các mẫu nhân chập sau đâu là mẫu nhân chập của kỹ thuật SOBEL", "images": [], "options": [{"text": "", "is_correct": true, "images": ["images/image24.png"]}, {"text": "", "is_correct": false, "images": ["images/image9.png"]}, {"text": "", "is_correct": false, "images": ["images/image10.png"]}, {"text": "", "is_correct": false, "images": ["images/image25.png"]}]}, {"question_num": 201, "question": "106. Đâu là ký hiệu của phép giãn ảnh (Dilation)?", "images": [], "options": [{"text": "A ⊖ B", "is_correct": false, "images": []}, {"text": "A  B", "is_correct": false, "images": []}, {"text": "A ⊕ B", "is_correct": true, "images": []}, {"text": "A = B", "is_correct": false, "images": []}]}, {"question_num": 202, "question": "107. Lọc ảnh trong miền không gian là :", "images": [], "options": [{"text": "Áp dụng một thao tác trong một miền lân cận tại tất cả các điểm ảnh", "is_correct": true, "images": []}, {"text": "Thực hiện nhân chập", "is_correct": false, "images": []}, {"text": "Thực hiện một hàm tính toán để đưa ra ảnh mới", "is_correct": false, "images": []}, {"text": "Nội suy các giá trị của ảnh", "is_correct": false, "images": []}]}, {"question_num": 203, "question": "108. Kết luận nào sau đây là sai :", "images": [], "options": [{"text": "Phép lọc Bilateral có tốc độ tính chậm", "is_correct": false, "images": []}, {"text": "Bilateral là phép lọc phi tuyến", "is_correct": true, "images": []}, {"text": "Phép lọc Average cho kết quả tốt hơn phép lọc trung vị", "is_correct": false, "images": []}, {"text": "Phép lọc Average là làm trơn ảnh", "is_correct": false, "images": []}]}, {"question_num": 204, "question": "109. Cho một ảnh số có các giá trị điểm ảnh nằm trong vùng 0-9 và có kích thước 4x4 như sau :", "images": [], "options": [{"text": "[2 2 0 3 0 2 1 1 3 2]", "is_correct": false, "images": []}, {"text": "[2 2 1 2 0 2 1 1 3 2]", "is_correct": true, "images": []}, {"text": "[2 1 2 2 0 2 1 1 3 2]", "is_correct": false, "images": []}, {"text": "[2 2 1 2 0 2 1 1 2 3]", "is_correct": false, "images": []}]}, {"question_num": 205, "question": "110. Phép toán không phụ thuộc vị trí điểm ảnh?", "images": [], "options": [{"text": "Thống kê tần suất", "is_correct": false, "images": []}, {"text": "Biến đổi tần suất", "is_correct": false, "images": []}, {"text": "Tăng giảm độ sáng", "is_correct": false, "images": []}, {"text": "Nén ảnh", "is_correct": true, "images": []}]}, {"question_num": 206, "question": "111. Một ảnh xám có độ phân giải 900 x 600 sẽ có độ lớn là :", "images": [], "options": [{"text": "527.3 KB", "is_correct": true, "images": []}, {"text": "0.198 MB", "is_correct": false, "images": []}, {"text": "197.8 Kb", "is_correct": false, "images": []}, {"text": "0.198 Mb", "is_correct": false, "images": []}]}, {"question_num": 207, "question": "113. Bộ lọc Box Filter cho ảnh số", "images": [], "options": [{"text": "Rõ các biên", "is_correct": false, "images": []}, {"text": "Sắc nét", "is_correct": false, "images": []}, {"text": "Là phép lọc trung vị", "is_correct": false, "images": []}, {"text": "Tương ứng phép lọc thông thấp", "is_correct": true, "images": []}]}, {"question_num": 208, "question": "114. Mục đích cân bằng histogram là để:", "images": [], "options": [{"text": "Nhằm giảm độ nhiễu của ảnh", "is_correct": false, "images": []}, {"text": "Nhằm tăng cường độ sáng của ảnh chụp kém chất lượng", "is_correct": false, "images": []}, {"text": "Đưa ra một ảnh có mức xám được phân bố đồng đều", "is_correct": true, "images": []}, {"text": "Nhằm giảm bớt độ tối của ảnh", "is_correct": false, "images": []}]}, {"question_num": 209, "question": "117. Phép giãn ảnh nhằm :", "images": [], "options": [{"text": "Làm kích thước ảnh to hơn", "is_correct": false, "images": []}, {"text": "Mở rộng các vùng tách biệt của ảnh", "is_correct": false, "images": []}, {"text": "Làm kích thước các đối tượng trong ảnh nhỏ đi", "is_correct": false, "images": []}, {"text": "Mở rộng một đối tượng dựa vào một phần tử cấu trúc", "is_correct": true, "images": []}]}, {"question_num": 210, "question": "118. Phép xử lý hình thái ảnh thường tiến hành trên", "images": [], "options": [{"text": "Ảnh xám và ảnh màu", "is_correct": false, "images": []}, {"text": "Ảnh màu", "is_correct": false, "images": []}, {"text": "Ảnh nhị phân và ảnh xám", "is_correct": true, "images": []}, {"text": "Ảnh màu và ảnh nhị phân", "is_correct": false, "images": []}]}, {"question_num": 211, "question": "119. Giả sử ảnh I có giá trị :Lọc trung bình với cửa sổ lọc kích thước 3x3 thì giá trị lọc sẽ là:", "images": ["images/image26.png"], "options": [{"text": "6.1 ... 7.2 5.8 ... 6.4", "is_correct": true, "images": []}, {"text": "55 ... 65 52...58", "is_correct": false, "images": []}, {"text": "31 ... 1 5 ... 5", "is_correct": false, "images": []}]}, {"question_num": 212, "question": "121. Hình ảnh sau là một bộ lọc :", "images": ["images/image28.png"], "options": [{"text": "Thông thấp Butterworth", "is_correct": false, "images": []}, {"text": "Thông thấp Ideal", "is_correct": false, "images": []}, {"text": "Thông cao Gaussian", "is_correct": true, "images": []}, {"text": "Thông cao Ideal", "is_correct": false, "images": []}]}, {"question_num": 213, "question": "122. Kỹ thuật nào sau đây không thuộc lĩnh vực xử lý ảnh:", "images": [], "options": [{"text": "Làm mịn ảnh", "is_correct": false, "images": []}, {"text": "Loại bỏ nhiễu", "is_correct": false, "images": []}, {"text": "Làm sắc nét ảnh", "is_correct": false, "images": []}, {"text": "Mã hóa thông tin", "is_correct": true, "images": []}]}, {"question_num": 214, "question": "123. Biến đổi Fourier dựa trên nguyên lý :", "images": [], "options": [{"text": "Biến đổi tín hiệu ảnh thành tín hiệu trong miền tần số", "is_correct": false, "images": []}, {"text": "Bất cứ một hàm tuần hoàn nào cũng có thể biểu diễn dưới dạng một tổng có trọng số của các hàm tan/cosin có tần số và biên độ khác nhau", "is_correct": false, "images": []}, {"text": "Bất cứ một hàm nào cũng có thể biểu diễn dưới dạng một tổng có trọng số của các hàm sin/cosin có tần số và biên độ khác nhau", "is_correct": false, "images": []}, {"text": "Bất cứ một hàm tuần hoàn nào cũng có thể biểu diễn dưới dạng một tổng có trọng số của các hàm sin/cosin có tần số và biên độ khác nhau", "is_correct": true, "images": []}]}, {"question_num": 215, "question": "124. Histogram của ảnh đóng vai trò quan trọng gì trong các ứng dụng xử lý ảnh và nhận dạng?", "images": [], "options": [{"text": "Phân đoạn ảnh", "is_correct": false, "images": []}, {"text": "Tất cả đều đúng", "is_correct": true, "images": []}, {"text": "Nhận dạng", "is_correct": false, "images": []}, {"text": "Đối sánh ảnh", "is_correct": false, "images": []}]}, {"question_num": 216, "question": "125. Ý nghĩa của bộ lọc trung bình:", "images": [], "options": [{"text": "Loại bỏ những pixel biến đổi lớn so với lân cận", "is_correct": false, "images": []}, {"text": "Tát cả đều đúng", "is_correct": true, "images": []}, {"text": "Tất cả đều sai", "is_correct": false, "images": []}, {"text": "Làm mờ vùng nhiễu", "is_correct": false, "images": []}]}, {"question_num": 217, "question": "126. Cho ảnh I có giá trị sau :", "images": [], "options": [{"text": "Không xác định", "is_correct": false, "images": []}, {"text": "439", "is_correct": false, "images": []}, {"text": "79", "is_correct": false, "images": []}, {"text": "43.2", "is_correct": true, "images": []}]}, {"question_num": 218, "question": "127. Trong quá trình phát hiện biên sau thì lọc nhiễu có vai trò gì", "images": ["images/image41.png"], "options": [{"text": "Do ảnh khi thu nhận thường có nhiều biên phụ vì vậy cần xóa bỏ để làm nổi bật vùng biên (*)", "is_correct": false, "images": []}, {"text": "Lọc nhiễu là quá trình biến đổi cấp xám cho ảnh", "is_correct": false, "images": []}, {"text": "Do ảnh khi thu nhận thường không mịn vùng ảnh, vì vậy cần làm trơn vùng ảnh", "is_correct": true, "images": []}, {"text": "Lọc nhiễu là quá trình lượng tử hóa vùng ảnh", "is_correct": false, "images": []}]}, {"question_num": 219, "question": "128. Hình ảnh sau là một bộ lọc : ​", "images": ["images/image42.png"], "options": [{"text": "Thông thấp Butterworth", "is_correct": false, "images": []}, {"text": "Thông thấp Gaussian", "is_correct": false, "images": []}, {"text": "Thông thấp Ideal", "is_correct": false, "images": []}, {"text": "Thông cao Ideal", "is_correct": true, "images": []}]}, {"question_num": 220, "question": "129. Đây là tín hiệu gốc và tín hiệu lọc", "images": ["images/image43.png"], "options": [{"text": "Thông giải", "is_correct": false, "images": []}, {"text": "Thông chặn", "is_correct": false, "images": []}, {"text": "Thông cao", "is_correct": false, "images": []}, {"text": "Thông thấp", "is_correct": true, "images": []}]}, {"question_num": 221, "question": "130. Một mảng có các phần tử là : [2,4,7,2,34,19,28,19,20] Phần tử trung vị là :", "images": [], "options": [{"text": "7", "is_correct": false, "images": []}, {"text": "19", "is_correct": true, "images": []}, {"text": "20", "is_correct": false, "images": []}, {"text": "34", "is_correct": false, "images": []}]}, {"question_num": 222, "question": "131. Mẫu tích chập sau đây là :", "images": ["images/image44.png"], "options": [{"text": "Là xấp xỉ đạo hàm bậc hai trong tín hiệu rời rạc điểm ảnh", "is_correct": true, "images": []}, {"text": "Là xấp xỉ đạo hàm bậc một trong tín hiệu rời rạc điểm ảnh", "is_correct": false, "images": []}]}, {"question_num": 223, "question": "132. Phép lọc nào cho hình ảnh mịn nhất :", "images": [], "options": [{"text": "Lọc Gaussian", "is_correct": true, "images": []}, {"text": "Lọc song phương", "is_correct": false, "images": []}, {"text": "Lọc trung vị", "is_correct": false, "images": []}, {"text": "Lọc trung bình", "is_correct": false, "images": []}]}, {"question_num": 224, "question": "133. Phép lọc sử dụng bộ lọc Gauss có tác dụng gì?", "images": [], "options": [{"text": "Làm sắc nét ảnh", "is_correct": false, "images": []}, {"text": "Làm mịn ảnh tự nhiên nhất", "is_correct": true, "images": []}, {"text": "Làm mờ ảnh", "is_correct": false, "images": []}]}, {"question_num": 225, "question": "134. Thực hiện histogram trên ảnh số :", "images": [], "options": [{"text": "Tăng độ tương phản", "is_correct": false, "images": []}, {"text": "Đối sánh", "is_correct": false, "images": []}, {"text": "Tách ngưỡng", "is_correct": false, "images": []}, {"text": "Tăng độ tương phản, đối sánh", "is_correct": true, "images": []}]}, {"question_num": 226, "question": "135. Phép lọc nào hiệu quả với nhiễu muối tiêu :", "images": [], "options": [{"text": "Lọc song phương", "is_correct": false, "images": []}, {"text": "Lọc trung bình", "is_correct": false, "images": []}, {"text": "Lọc trung vị", "is_correct": true, "images": []}, {"text": "Lọc Gaussian", "is_correct": false, "images": []}]}, {"question_num": 227, "question": "137. Lọc ảnh là nhằm", "images": [], "options": [{"text": "Biến đổi ảnh cho việc lưu trữ hiệu quả hơn", "is_correct": false, "images": []}, {"text": "Làm cho ảnh đẹp hơn", "is_correct": false, "images": []}, {"text": "Loại bỏ nhiễu hoặc tăng cường một tính chất nào đó của ảnh hoặc kết hợp cả hai", "is_correct": true, "images": []}, {"text": "Làm cho ảnh có độ tương phản cao hơn", "is_correct": false, "images": []}]}, {"question_num": 228, "question": "138. Cho một ảnh xám được biểu diễn bởi ma trận 4x4 sau: [17 152 145 78 ;45 78 27 152 ;18 108 152 167 ;17 80 153 27]. Ảnh sau khi cân bằng histogram là:", "images": [], "options": [{"text": "[31 222 174 125 ;95 125 79 222 ;47 158 222 254 ;31 142 238 79]", "is_correct": false, "images": []}, {"text": "[31 223 175 127 ;95 127 79 223 ;47 159 223 255 ;31 143 240 79]", "is_correct": false, "images": []}, {"text": "[31 223 175 127 ;95 127 79 223 ;47 159 223 255 ;31 143 239 79]", "is_correct": true, "images": []}, {"text": "[31 222 170 127 ;95 127 79 222 ;47 158 222 254 ;31 142 238 79]", "is_correct": false, "images": []}]}, {"question_num": 229, "question": "139. Hình ảnh sau là một bộ lọc : ​", "images": ["images/image45.png"], "options": [{"text": "Thông thấp Butterworth", "is_correct": true, "images": []}, {"text": "Thông cao Ideal", "is_correct": false, "images": []}, {"text": "Thông thấp Gaussian", "is_correct": false, "images": []}, {"text": "Thông thấp Ideal", "is_correct": false, "images": []}]}, {"question_num": 230, "question": "140. Độ phân giải của ảnh là :", "images": [], "options": [{"text": "Là mật độ điểm ảnh được ấn định trên một ảnh số được hiển thi", "is_correct": true, "images": []}, {"text": "Là số bit của điểm ảnh", "is_correct": false, "images": []}, {"text": "Là mức độ xám của ảnh so với một giá trị nguyên dương", "is_correct": false, "images": []}, {"text": "Là cường độ sáng của ảnh so với nền", "is_correct": false, "images": []}]}, {"question_num": 231, "question": "141. Cho ảnh xám kích thước 4x4 ​I = [208 161 245 245 ; 231 24 247 124 ; 32 71 40 204 ; 233 140 248 36]​Kết quả của phép lọc trung vị với nhân kích thước 3x3 sẽ là :", "images": [], "options": [{"text": "[0 0 0 0 ; 0 161 247 0 ; 0 140 124 0 ; 0 0 0 0]", "is_correct": false, "images": []}, {"text": "[0 0 0 0 ; 0 208 161 0 ; 0 140 124 0 ; 0 0 0 0]", "is_correct": false, "images": []}, {"text": "[0 0 0 0 ; 0 161 161 0 ; 0 140 124 0 ; 0 0 0 0]", "is_correct": true, "images": []}, {"text": "[0 0 0 0 ; 0 161 161 0 ; 0 204 124 0 ; 0 0 0 0]", "is_correct": false, "images": []}]}, {"question_num": 232, "question": "148. Trong thuật toán K –mean thì K nghĩa là gì", "images": [], "options": [{"text": "K cụm giá trị ngưỡng", "is_correct": false, "images": []}, {"text": "K cấp độ sáng", "is_correct": false, "images": []}, {"text": "K láng giềng", "is_correct": false, "images": []}, {"text": "K cụm màu", "is_correct": true, "images": []}]}, {"question_num": 233, "question": "151. Các phép toán sử dụng toán tử không gian để ?", "images": [], "options": [{"text": "Làm trơn hoặc mờ ảnh", "is_correct": false, "images": []}, {"text": "Phát hiện biên", "is_correct": false, "images": []}, {"text": "Làm nét ảnh", "is_correct": false, "images": []}, {"text": "Tất cả đều đúng", "is_correct": true, "images": []}]}, {"question_num": 234, "question": "152. N4(P) là ký hiệu chỉ :", "images": [], "options": [{"text": "Bốn điểm thẳng hàng với một điểm ảnh", "is_correct": false, "images": []}, {"text": "Bốn điểm lân cận theo chiều dọc và ngang của một điểm ảnh", "is_correct": true, "images": []}, {"text": "Bốn điểm lân cận theo hai đường chéo chính của một điểm ảnh", "is_correct": false, "images": []}, {"text": "Bốn điểm cách đều một điểm ảnh", "is_correct": false, "images": []}]}, {"question_num": 235, "question": "153. Kỹ thuật phát hiện biên la bàn sử dụng mấy SOBEL", "images": [], "options": [{"text": "4", "is_correct": false, "images": []}, {"text": "6", "is_correct": false, "images": []}, {"text": "8", "is_correct": true, "images": []}, {"text": "2", "is_correct": false, "images": []}]}, {"question_num": 236, "question": "154. Tìm output của phép lọc trung vị đối với input là giá trị tại hàng thứ ba, cột thứ ba của ảnh số :", "images": [], "options": [{"text": "2", "is_correct": false, "images": []}, {"text": "3", "is_correct": false, "images": []}, {"text": "6", "is_correct": false, "images": []}, {"text": "4", "is_correct": true, "images": []}]}, {"question_num": 237, "question": "156. Cho ảnh xám kích thước 4x4 ​I = [107 167 173 167 ; 234 9 193 43 ; 202 217 190 180 ; 245 239 100 8]​Kết quả của phép lọc trung bình với nhân kích thước 3x3 sẽ là :", "images": [], "options": [{"text": "[0 0 0 0 ; 0 166 149 0 ; 0 111 131 0 ; 0 0 0 0]", "is_correct": false, "images": []}, {"text": "[0 0 0 0 ; 0 166 149 0 ; 0 181 131 0 ; 0 0 0 0]", "is_correct": true, "images": []}, {"text": "[0 0 0 0 ; 0 166 144 0 ; 0 181 131 0 ; 0 0 0 0]", "is_correct": false, "images": []}, {"text": "[0 0 0 0 ; 0 156 149 0 ; 0 181 131 0 ; 0 0 0 0]", "is_correct": false, "images": []}]}, {"question_num": 238, "question": "157. (**)Việc xác định một điểm có thuộc về một vùng ảnh hay không có thể thực hiện dựa vào các giá trị", "images": [], "options": [{"text": "Tổng sai khác về màu sắc và khoảng cách", "is_correct": false, "images": []}, {"text": "Trung bình hoặc phương sai của màu sắc", "is_correct": true, "images": []}, {"text": "Khoảng cách từ điểm đó tới các điểm trong vùng đang xét", "is_correct": false, "images": []}, {"text": "Độ sai biệt về màu sắc", "is_correct": false, "images": []}]}, {"question_num": 239, "question": "158. Cho một ảnh có số các giá trị điểm ảnh nằm trong vùng từ 0-9 và có kích thước 4x4 như sau : ​[0 1 8 6 ; 8 6 2 0 ; 9 8 7 4 ; 0 6 3 2]​Vector histogram của ảnh sẽ là :", "images": [], "options": [{"text": "[3 1 2 1 1 0 3 1 3 1 1]", "is_correct": false, "images": []}, {"text": "[3 1 2 1 1 0 3 1 3 1]", "is_correct": true, "images": []}, {"text": "[3 1 2 1 1 0 3 1 3]", "is_correct": false, "images": []}, {"text": "[3 1 2 1 1 0 2 1 3 1]", "is_correct": false, "images": []}]}, {"question_num": 240, "question": "159. Đâu là ký hiệu của phép mở ảnh Hit or miss ?", "images": [], "options": [{"text": "A ⊛ B", "is_correct": true, "images": []}, {"text": "A ⊕ B", "is_correct": false, "images": []}, {"text": "A = B", "is_correct": false, "images": []}, {"text": "A  B", "is_correct": false, "images": []}]}, {"question_num": 241, "question": "160. Phát hiện biên nhằm :", "images": [], "options": [{"text": "Làm nổi bật các điểm ảnh tạo thành biên (EDGE) của ảnh", "is_correct": true, "images": []}, {"text": "Tăng cường độ tương phản của ảnh", "is_correct": false, "images": []}, {"text": "Làm ảnh mịn đi", "is_correct": false, "images": []}, {"text": "Lọc nhiễu", "is_correct": false, "images": []}]}, {"question_num": 242, "question": "161. Histogram của ảnh là :", "images": [], "options": [{"text": "Một biểu đồ thống kê tần suất xuất hiện của các giá trị cường độ sáng (hoặc màu sắc) của các điểm ảnh", "is_correct": true, "images": []}, {"text": "Biểu đò thống kê các điểm ảnh có cường đố sáng lớn hơn một ngưỡng T", "is_correct": false, "images": []}, {"text": "Một biểu diễn trong hệ trục tọa độ 2 chiều của ảnh", "is_correct": false, "images": []}, {"text": "Biểu đồ thống kê thông tin tần số của ảnh", "is_correct": false, "images": []}]}, {"question_num": 243, "question": "163. Có mấy bước cơ bản của một hệ thống xử lý ảnh:", "images": [], "options": [{"text": "5 bước: Thu nhận ảnh, tiền xử lý, phân đoạn, nén ảnh, nhận dạng và nội suy", "is_correct": false, "images": []}, {"text": "4 bước: Thu nhận ảnh, tiền xử lý, phân đoạn, nhận dạng và nội suy", "is_correct": false, "images": []}, {"text": "5 bước: Thu nhận ảnh, tiền xử lý, phân đoạn, biểu diễn và mô tả, nhận dạng và nội suy", "is_correct": true, "images": []}, {"text": "4 bước: Thu nhận ảnh, phân đoạn, biểu diễn và mô tả, nhận dạng và nội suy", "is_correct": false, "images": []}]}, {"question_num": 244, "question": "165. Trong phép lọc trung bình :", "images": [], "options": [{"text": "Mỗi điểm ảnh kết quả sẽ bằng trung bình cộng của hai điểm lân cận của nó", "is_correct": false, "images": []}, {"text": "Mỗi điểm ảnh trong ảnh kết quả sẽ có cường độ sáng bằng trung bình nhân của các điểm ảnh lân cận với nó (xác định bằng kích thước của nhân)", "is_correct": false, "images": []}, {"text": "Mỗi điểm ảnh trong ảnh kết quả sẽ có cường độ sáng bằng trung bình cộng của các điểm ảnh lân cận với nó (xác định bằng kích thước của nhân)", "is_correct": true, "images": []}, {"text": "Mỗi điểm ảnh kết quả sẽ bằng trung bình cộng của bốn điểm lân cận của nó", "is_correct": false, "images": []}]}, {"question_num": 245, "question": "173. (**)Kỹ thuật nào sau đây thuộc lĩnh vực xử lý ảnh", "images": [], "options": [{"text": "Tách biên, tách cạnh", "is_correct": true, "images": []}, {"text": "Lưu trữ bảng mã", "is_correct": false, "images": []}, {"text": "Phá mã thông tin", "is_correct": false, "images": []}, {"text": "Số hóa thông tin", "is_correct": false, "images": []}]}, {"question_num": 246, "question": "175. Cho ảnh I có giá trị như sau : [2 4 3 ; 5 7 2 ; 7 6 2] Mẫu nhân chập T là : [1 2 3 ; 4 5 6 ; 7 8 9] Kết quả nhân chập sẽ bằng :", "images": [], "options": [{"text": "201", "is_correct": true, "images": []}, {"text": "Không xác định", "is_correct": false, "images": []}, {"text": "22", "is_correct": false, "images": []}, {"text": "102", "is_correct": false, "images": []}]}, {"question_num": 247, "question": "176. (**)Cho ảnh số và ảnh biến đổi sau đây : Cho biết phép biến đổi trên :", "images": ["images/image47.png"], "options": [{"text": "Tách ngưỡng", "is_correct": false, "images": []}, {"text": "Logarithm", "is_correct": false, "images": []}, {"text": "Âm bản", "is_correct": false, "images": []}, {"text": "Tương phản", "is_correct": true, "images": []}]}, {"question_num": 248, "question": "177. Cho ảnh xám kích thước 4x4 ​I = [107 167 173 167 ; 234 9 193 43 ; 202 217 190 180 ; 245 239 100 8]​Kết quả của phép lọc trung vị với nhân kích thước 3x3 sẽ là :", "images": [], "options": [{"text": "[0 0 0 0 ; 0 193 173 0 ; 0 216 180 0 ; 0 0 0 0]", "is_correct": false, "images": []}, {"text": "[0 0 0 0 ; 0 190 173 0 ; 0 202 180 0 ; 0 0 0 0]", "is_correct": true, "images": []}, {"text": "[0 0 0 0 ; 0 194 173 0 ; 0 217 180 0 ; 0 0 0 0]", "is_correct": false, "images": []}, {"text": "[0 0 0 0 ; 0 193 173 0 ; 0 217 181 0 ; 0 0 0 0]", "is_correct": false, "images": []}]}, {"question_num": 249, "question": "178. Tăng cường độ tương phản của ảnh là thao tác :", "images": [], "options": [{"text": "Ánh xạ vùng giá trị hẹp của các điểm ảnh vào vùng giá trị chuẩn", "is_correct": true, "images": []}, {"text": "Thay đổi các màu sắc của ảnh cho đễ nhìn hơn", "is_correct": false, "images": []}, {"text": "Điều chỉnh các giá trị cực đại của ảnh", "is_correct": false, "images": []}, {"text": "Loại bỏ các chi tiết khó quan sát", "is_correct": false, "images": []}]}, {"question_num": 250, "question": "179. Ảnh nhị phân là :", "images": [], "options": [{"text": "Ảnh đen trắng có ba kênh màu", "is_correct": false, "images": []}, {"text": "Ảnh màu có một kênh màu", "is_correct": false, "images": []}, {"text": "Ảnh màu với mỗi kênh màu có giá trị màu của từng điểm ảnh tối đa là 1", "is_correct": false, "images": []}, {"text": "Ảnh xám có mỗi điểm ảnh có cường độ sáng là 0 hoặc 1", "is_correct": true, "images": []}]}, {"question_num": 251, "question": "181. Đây là tín hiệu gốc và tín hiệu lọc", "images": ["images/image48.png"], "options": [{"text": "Thông thấp", "is_correct": false, "images": []}, {"text": "Thông giải", "is_correct": false, "images": []}, {"text": "Thông cao", "is_correct": true, "images": []}, {"text": "Thông chặn", "is_correct": false, "images": []}]}, {"question_num": 252, "question": "182. Kỹ thuật phân đoạn dựa vào tách ngưỡng không được sử dụng vì:", "images": [], "options": [{"text": "Không có đáp án đúng", "is_correct": true, "images": []}, {"text": "Không có hiệu quả tốt", "is_correct": false, "images": []}, {"text": "Chạy quá chậm", "is_correct": false, "images": []}, {"text": "Quá đơn giản", "is_correct": false, "images": []}]}, {"question_num": 253, "question": "183. Đâu là ký hiệu của phép co ảnh (Erosion)?", "images": [], "options": [{"text": "A ⊕ B", "is_correct": false, "images": []}, {"text": "A = B", "is_correct": false, "images": []}, {"text": "A  B", "is_correct": false, "images": []}, {"text": "A ⊖ B", "is_correct": true, "images": []}]}, {"question_num": 254, "question": "184. Cho một nhị phân được biểu diễn bởi ma trận 5x5 sau: [[1 0 1 0 0;1 1 1 0 1;0 1 1 1 1;1 0 1 0 1;0 1 1 0 0]]. Kết quả của phép mở ảnh (với nhân kim cương kích thước 3x3) là:", "images": [], "options": [{"text": "[0 0 0 0 0;0 1 1 0 1;0 1 1 1 1;0 1 1 0 1;0 0 0 0 0]", "is_correct": false, "images": []}, {"text": "[0 0 0 0 0;0 0 1 0 1;0 1 1 1 1;0 0 1 0 1;0 0 0 0 0]", "is_correct": true, "images": []}, {"text": "[0 0 1 0 0;0 0 1 0 1;0 1 1 1 1;0 1 1 0 1;0 0 0 0 0]", "is_correct": false, "images": []}, {"text": "[0 0 0 0 0;0 0 1 0 1;0 1 0 1 1;0 1 1 0 1;0 0 0 0 0]", "is_correct": false, "images": []}]}, {"question_num": 255, "question": "185. Hình ảnh sau là một bộ lọc : ​", "images": ["images/image49.png"], "options": [{"text": "Thông thấp Butterworth", "is_correct": false, "images": []}, {"text": "Thông cao Butterworth", "is_correct": true, "images": []}, {"text": "Thông cao Ideal", "is_correct": false, "images": []}, {"text": "Thông thấp Ideal", "is_correct": false, "images": []}]}, {"question_num": 256, "question": "186. Cho ảnh xám kích thước 4x4 I = [181 167 245 192;193 41 87 65;70 30 149 129;174 127 57 178], kết quả của phép lọc trung vị với nhân 3x3 của ảnh trên sẽ là:", "images": [], "options": [{"text": "[0 0 0 0;0 129 129 0;0 87 87 0;0 0 0 0]", "is_correct": false, "images": []}, {"text": "[0 0 0 0;0 149 119 0;0 87 87 0;0 0 0 0]", "is_correct": false, "images": []}, {"text": "[0 0 0 0;0 149 129 0;0 87 87 0;0 0 0 0]", "is_correct": true, "images": []}, {"text": "[0 0 0 0;0 149 129 0;0 77 87 0;0 0 0 0]", "is_correct": false, "images": []}]}, {"question_num": 257, "question": "187. Trong trường hợp tăng cường độ sáng/tối của ảnh ta có biểu thức: I(x,y)=I(x,y) +c Với c>0 thì ảnh sẽ", "images": [], "options": [{"text": "Tăng độ sáng", "is_correct": true, "images": []}, {"text": "Tăng độ tối", "is_correct": false, "images": []}, {"text": "Không thay đổi", "is_correct": false, "images": []}]}, {"question_num": 258, "question": "188. Ảnh xám 8 bit thì mỗi điểm ảnh có giá trị là:", "images": [], "options": [{"text": "8", "is_correct": false, "images": []}, {"text": "32", "is_correct": false, "images": []}, {"text": "256", "is_correct": true, "images": []}, {"text": "128", "is_correct": false, "images": []}]}, {"question_num": 259, "question": "189. Cho một ảnh xám được biểu diễn bởi ma trận 4x4 sau: [27 152 45 178 ;45 108 27 13 ;152 108 24 167 ;178 80 153 24]. Độ tương phản của ảnh là:", "images": [], "options": [{"text": "160", "is_correct": false, "images": []}, {"text": "155", "is_correct": false, "images": []}, {"text": "170", "is_correct": false, "images": []}, {"text": "165", "is_correct": true, "images": []}]}, {"question_num": 260, "question": "190. Một bộ lọc thông thấp có thể thu được bằng cách :", "images": [], "options": [{"text": "Lấy hiệu của 1 và bộ lọc thông cao tương ứng", "is_correct": true, "images": []}, {"text": "Lấy tổng của 1 và bộ lọc thông cao tương ứng", "is_correct": false, "images": []}, {"text": "Lấy tích của 1 và bộ lọc thông thấp tương ứng", "is_correct": false, "images": []}, {"text": "Lấy thương của 1 và bộ lọc thông thấp tương ứng", "is_correct": false, "images": []}]}, {"question_num": 261, "question": "191. Ảnh xám là", "images": [], "options": [{"text": "Một ma trận các số nguyên với giá trị của các phần tử nằm trong khoảng từ 0 tới 255", "is_correct": true, "images": []}, {"text": "Một ma trận số nguyên trong khoảng từ 0 đến 2^8", "is_correct": false, "images": []}, {"text": "Một ma trận số nguyên với giá trị các phần tử nằm trong khoảng từ 0 tới 8^2", "is_correct": false, "images": []}, {"text": "Một ma trận số nguyên kích thước là 800*600", "is_correct": false, "images": []}]}, {"question_num": 262, "question": "192. Phép lọc ảnh quan trọng và phổ biến nhất trong miền không gian là :", "images": [], "options": [{"text": "Lọc trung vị", "is_correct": false, "images": []}, {"text": "Cân bằng histogram", "is_correct": false, "images": []}, {"text": "Lọc trung bình", "is_correct": false, "images": []}, {"text": "Lọc Gaussian", "is_correct": true, "images": []}]}, {"question_num": 263, "question": "193. Đâu không phải là một phương pháp nội suy", "images": [], "options": [{"text": "Song lập phương", "is_correct": false, "images": []}, {"text": "Song tuyến tính", "is_correct": false, "images": []}, {"text": "Đạo hàm", "is_correct": true, "images": []}, {"text": "Láng giềng gần nhất", "is_correct": false, "images": []}]}, {"question_num": 264, "question": "194. Đây là tín hiệu gốc và tín hiệu lọc", "images": ["images/image50.png"], "options": [{"text": "Thông cao", "is_correct": false, "images": []}, {"text": "Thông chặn", "is_correct": false, "images": []}, {"text": "Thông giải", "is_correct": true, "images": []}, {"text": "Thông thấp", "is_correct": false, "images": []}]}, {"question_num": 265, "question": "195. Lọc trung bình không có tính năng :", "images": [], "options": [{"text": "Làm mịn ảnh", "is_correct": false, "images": []}, {"text": "Loại bỏ nhiễu", "is_correct": false, "images": []}, {"text": "Không có đáp án đúng", "is_correct": false, "images": []}, {"text": "Loại bỏ nhiễu muối tiêu", "is_correct": true, "images": []}]}, {"question_num": 266, "question": "196. Cho ảnh gốc sau đây. Hãy cho biết đâu là kết quả của phép OPEN ảnh ?", "images": ["images/image40.png"], "options": [{"text": "", "is_correct": false, "images": ["images/image32.png"]}, {"text": "", "is_correct": false, "images": ["images/image33.png"]}, {"text": "", "is_correct": true, "images": ["images/image34.png"]}, {"text": "", "is_correct": false, "images": ["images/image35.png"]}]}, {"question_num": 267, "question": "197. Nhân chập là :", "images": [], "options": [{"text": "Áp dụng chọn một giá trị trong các điểm ảnh nằm bao bởi một nhân lọc", "is_correct": false, "images": []}, {"text": "Phép nhân như nhân 2 ma trận", "is_correct": false, "images": []}, {"text": "Thao tác lấy tổng các phép nhân giữa các hệ số của một ma trận gọi là nhân với các điểm ảnh được bao bọc bởi nhân đó", "is_correct": true, "images": []}, {"text": "Thực hiện nhân điểm - điểm giữa một nhân với một ảnh số", "is_correct": false, "images": []}]}, {"question_num": 268, "question": "200. Giả sử ảnh I có giá trị :Lọc trung vị với cửa sổ lọc kích thước 3x3 thì giá trị lọc sẽ là:", "images": ["images/image26.png"], "options": [{"text": "4 5 ; 2 4", "is_correct": true, "images": []}, {"text": "31 1 ; 5 5", "is_correct": false, "images": []}, {"text": "4 5 ; 5 4", "is_correct": false, "images": []}, {"text": "4 5 ; 4 2", "is_correct": false, "images": []}]}, {"question_num": 269, "question": "201. Cho ảnh I có giá trị như sau : [2 4 3 ; 5 7 2 ; 7 6 2]​Mẫu nhân chập T là : [1 0 0 ; 0 1 1 ; 1 0 1] Kết quả nhân chập sẽ bằng :", "images": [], "options": [{"text": "11", "is_correct": false, "images": []}, {"text": "20", "is_correct": true, "images": []}, {"text": "38", "is_correct": false, "images": []}, {"text": "19", "is_correct": false, "images": []}]}, {"question_num": 270, "question": "204. Phép co ảnh nhằm :", "images": [], "options": [{"text": "Tăng kích thước các đối tượng tách biệt trong ảnh", "is_correct": false, "images": []}, {"text": "Không có đáp án đúng", "is_correct": false, "images": []}, {"text": "Giảm kích thước ảnh", "is_correct": false, "images": []}, {"text": "Thu hẹp một đối tượng dựa vào một phần tử cấu trúc", "is_correct": true, "images": []}]}, {"question_num": 271, "question": "207. Một ảnh nhị phân có độ phân giải 900x600 sẽ có độ lớn tương ứng là :", "images": [], "options": [{"text": "0.659 Mb", "is_correct": false, "images": []}, {"text": "65.9 KB", "is_correct": true, "images": []}, {"text": "65.9 kb", "is_correct": false, "images": []}, {"text": "0.659 MB", "is_correct": false, "images": []}]}, {"question_num": 272, "question": "208. Các kỹ thuật xử lý ảnh nhằm ?", "images": [], "options": [{"text": "Tất cả đều đúng", "is_correct": true, "images": []}, {"text": "Tăng giảm độ sắc nét của ảnh", "is_correct": false, "images": []}, {"text": "Nâng cao chất lượng ảnh", "is_correct": false, "images": []}, {"text": "Nén ảnh", "is_correct": false, "images": []}]}, {"question_num": 273, "question": "209. Có mấy cơ chế áp dụng phép nhân chập?", "images": [], "options": [{"text": "2", "is_correct": false, "images": []}, {"text": "1", "is_correct": false, "images": []}, {"text": "4", "is_correct": false, "images": []}, {"text": "3", "is_correct": true, "images": []}]}, {"question_num": 274, "question": "210. Tăng cường độ tương phản nhằm:", "images": [], "options": [{"text": "Ánh xạ miền giá trị cường độ sáng của ảnh vào một dải rộng hơn cho trước.", "is_correct": false, "images": []}, {"text": "Cân bằng màu sắc của ảnh.", "is_correct": false, "images": []}, {"text": "Nén các giá trị điểm ảnh vào một vùng hẹp hơn.", "is_correct": false, "images": []}, {"text": "Giãn miền giá trị cường độ sáng của các điểm ảnh nhằm làm nổi rõ các chi tiết của ảnh.", "is_correct": true, "images": []}]}, {"question_num": 275, "question": "212. Phân đoạn hay phân vùng ảnh là bước cơ bản trong", "images": [], "options": [{"text": "Hệ thống nén thông tin", "is_correct": false, "images": []}, {"text": "Hệ thống tiếng nói số", "is_correct": false, "images": []}, {"text": "Hệ thống mã hóa thông tin", "is_correct": false, "images": []}, {"text": "Hệ thống xử lý ảnh", "is_correct": true, "images": []}]}, {"question_num": 276, "question": "214. Phương pháp lấy ảnh âm bản được dùng để :", "images": [], "options": [{"text": "Trong các ảnh y tế, ví dụ như ảnh X-Quang, để làm nổi rõ các chi tiết của ảnh", "is_correct": true, "images": []}, {"text": "Tăng cường độ tương phản của ảnh", "is_correct": false, "images": []}, {"text": "Làm nổi bật các đường biên của ảnh", "is_correct": false, "images": []}, {"text": "Loại bỏ nhiễu trong ảnh", "is_correct": false, "images": []}]}, {"question_num": 277, "question": "215. Độ sâu màu của ảnh là :", "images": [], "options": [{"text": "Đại lượng đặc trưng cho tần số của thông tin ảnh", "is_correct": false, "images": []}, {"text": "Đại lượng mô tả kích thước của ảnh", "is_correct": false, "images": []}, {"text": "Đại lượng mô tả khả năng biểu diễn số lượng giá trị màu sắc của các điểm ảnh có trong ảnh", "is_correct": true, "images": []}, {"text": "Đại lượng mô tả kích thước lưu trữ của ảnh", "is_correct": false, "images": []}]}, {"question_num": 278, "question": "217. Khi ảnh bị ảnh hưởng của ánh sáng, thuật toán nào sẽ cho kết quả tốt nhất", "images": [], "options": [{"text": "Các phương pháp đều cho kết quả như nhau", "is_correct": false, "images": []}, {"text": "Tách ngưỡng biến thiên", "is_correct": true, "images": []}, {"text": "Tách ngưỡng toàn cục", "is_correct": false, "images": []}, {"text": "Tách ngưỡng tối ưu Ostu", "is_correct": false, "images": []}]}, {"question_num": 279, "question": "219. Biểu đồ tần suất (histogram) là gì", "images": [], "options": [{"text": "Thống kê số điểm ảnh của I với ngưỡng cho phép", "is_correct": false, "images": []}, {"text": "Để tính tần suất xuất hiện của vùng ảnh", "is_correct": false, "images": []}, {"text": "Thống kê tần suất (số giá trị) của mức xám g của ảnh I", "is_correct": true, "images": []}, {"text": "Thống kê mức xám của ảnh trong một khoảng ngưỡng nào đó", "is_correct": false, "images": []}]}, {"question_num": 280, "question": "221. Phép nhân chập giữa một ảnh xám và một nhân được thực hiện bằng cách", "images": [], "options": [{"text": "Đặt nhân vào vị trí từng điểm ảnh và tính tổng của các tích giữa các điểm ảnh trong ảnh gốc với phần tử tương ứng trong nhân", "is_correct": true, "images": []}, {"text": "Thực hiện phép nhân ma trận giữa ảnh và nhân", "is_correct": false, "images": []}, {"text": "Thực hiện tính tổng của các điểm lân cận nằm trong nhân", "is_correct": false, "images": []}, {"text": "Thực hiện tính tổng của các điểm lân cận nằm trong nhân với tổng các phần tử của nhân", "is_correct": false, "images": []}]}, {"question_num": 290, "question": "234. Cho ảnh gốc sau đây? Hãy cho biết đâu là kết quả của phép CLOSE ảnh?", "images": ["images/image40.png"], "options": [{"text": "", "is_correct": true, "images": ["images/image32.png"]}, {"text": "", "is_correct": false, "images": ["images/image33.png"]}, {"text": "", "is_correct": false, "images": ["images/image34.png"]}, {"text": "", "is_correct": false, "images": ["images/image35.png"]}]}, {"question_num": 291, "question": "235. Cho ảnh gốc sau đây? Hãy cho biết đâu là kết quả của phép giãn ảnh?", "images": ["images/image40.png"], "options": [{"text": "", "is_correct": true, "images": ["images/image32.png"]}, {"text": "", "is_correct": false, "images": ["images/image33.png"]}, {"text": "", "is_correct": false, "images": ["images/image51.png"]}, {"text": "", "is_correct": false, "images": ["images/image35.png"]}]}];
+
+        // Application State
+        let currentQuizSet = null; // 'all', 'random', or index 0-5
+        let currentQuestionsList = []; // list of questions for the current test
+        let userAnswers = {}; // { question_index_in_list: { selectedIndex: X, isCorrect: Y } }
+        let currentQuestionIndex = 0;
+        let timerInterval = null;
+        let secondsElapsed = 0;
+
+        // Initialization
+        document.addEventListener("DOMContentLoaded", () => {
+            initLandingPage();
+            initTheme();
+        });
+
+        // Initialize Landing page with sets
+        function initLandingPage() {
+            const container = document.getElementById("sets-grid-container");
+            container.innerHTML = "";
+
+            const totalQs = QUESTIONS_DATA.length;
+            const setSize = 50;
+            const setsCount = Math.ceil(totalQs / setSize);
+
+            for (let i = 0; i < setsCount; i++) {
+                const start = i * setSize;
+                const end = Math.min((i + 1) * setSize, totalQs);
+                const qCount = end - start;
+                const setIndex = i;
+
+                // Load highscore from localStorage
+                const highscore = localStorage.getItem(`highscore_set_${setIndex}`);
+                const highscoreText = highscore ? `Điểm cao: ${highscore}/${qCount}` : "Điểm cao: --";
+
+                const cardHtml = `
+                    <div class="set-card" onclick="startQuiz(${setIndex})">
+                        <div>
+                            <div class="set-title">Bộ Đề Số ${setIndex + 1}</div>
+                            <div class="set-range"><i class="fa-regular fa-folder-open"></i> Câu ${start + 1} - ${end}</div>
+                            <div style="font-size: 14px; margin-bottom: 12px; color: var(--text-secondary);">Bộ câu hỏi trắc nghiệm ôn luyện từ câu ${start + 1} đến câu ${end}.</div>
+                        </div>
+                        <div class="set-stats">
+                            <span>${qCount} Câu Hỏi</span>
+                            <span class="highscore-badge" id="hs-${setIndex}">${highscoreText}</span>
+                        </div>
+                        <i class="fa-regular fa-file-lines set-icon"></i>
+                    </div>
+                `;
+                container.insertAdjacentHTML("beforeend", cardHtml);
+            }
+
+            // Update highscores for special modes
+            const hsRandom = localStorage.getItem("highscore_set_random");
+            document.getElementById("hs-random").innerText = hsRandom ? `Điểm cao: ${hsRandom}/50` : "Điểm cao: --";
+            
+            const hsAll = localStorage.getItem("highscore_set_all");
+            document.getElementById("hs-all").innerText = hsAll ? `Điểm cao: ${hsAll}/${totalQs}` : "Điểm cao: --";
+        }
+
+        // Initialize Theme Toggle
+        function initTheme() {
+            const btn = document.getElementById("theme-toggle");
+            
+            // Check preference
+            const savedTheme = localStorage.getItem("theme");
+            if (savedTheme === "light") {
+                document.body.classList.add("light-mode");
+                btn.innerHTML = '<i class="fa-solid fa-sun"></i>';
+            } else {
+                document.body.classList.remove("light-mode");
+                btn.innerHTML = '<i class="fa-solid fa-moon"></i>';
+            }
+
+            btn.addEventListener("click", () => {
+                document.body.classList.toggle("light-mode");
+                const isLight = document.body.classList.contains("light-mode");
+                localStorage.setItem("theme", isLight ? "light" : "dark");
+                btn.innerHTML = isLight ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
+            });
+        }
+
+        // Start Quiz Session
+        function startQuiz(setSelector) {
+            currentQuizSet = setSelector;
+            userAnswers = {};
+            currentQuestionIndex = 0;
+            secondsElapsed = 0;
+
+            if (setSelector === "all") {
+                currentQuestionsList = [...QUESTIONS_DATA];
+            } else if (setSelector === "random") {
+                // Pick 50 random questions
+                const shuffled = [...QUESTIONS_DATA].sort(() => 0.5 - Math.random());
+                currentQuestionsList = shuffled.slice(0, 50).map(q => {
+                    // Shuffling options for random test (preserving correct state)
+                    const originalOptions = [...q.options];
+                    const shuffledOptions = originalOptions.sort(() => 0.5 - Math.random());
+                    return {
+                        ...q,
+                        options: shuffledOptions
+                    };
+                });
+            } else {
+                // Specific set
+                const start = setSelector * 50;
+                const end = Math.min((setSelector + 1) * 50, QUESTIONS_DATA.length);
+                currentQuestionsList = QUESTIONS_DATA.slice(start, end);
+            }
+
+            // Start timer
+            clearInterval(timerInterval);
+            document.getElementById("timer-display").querySelector("span").innerText = "00:00";
+            timerInterval = setInterval(() => {
+                secondsElapsed++;
+                const mins = Math.floor(secondsElapsed / 60).toString().padStart(2, '0');
+                const secs = (secondsElapsed % 60).toString().padStart(2, '0');
+                document.getElementById("timer-display").querySelector("span").innerText = `${mins}:${secs}`;
+            }, 1000);
+
+            // Hide landing and show quiz
+            switchView("view-quiz");
+
+            // Setup Sidebar
+            setupSidebar();
+
+            // Load first question
+            loadQuestion(0);
+        }
+
+        function setupSidebar() {
+            const container = document.getElementById("grid-navigator");
+            container.innerHTML = "";
+            
+            // Grid columns adjustment if total questions is very large (e.g. 282)
+            if (currentQuestionsList.length > 100) {
+                container.style.gridTemplateColumns = "repeat(6, 1fr)";
+            } else {
+                container.style.gridTemplateColumns = "repeat(5, 1fr)";
+            }
+
+            currentQuestionsList.forEach((_, idx) => {
+                const numBtn = document.createElement("button");
+                numBtn.className = "nav-num";
+                numBtn.id = `nav-num-${idx}`;
+                numBtn.innerText = idx + 1;
+                numBtn.onclick = () => {
+                    saveActiveState();
+                    loadQuestion(idx);
+                };
+                container.appendChild(numBtn);
+            });
+
+            updateSidebarCounter();
+        }
+
+        function updateSidebarCounter() {
+            const answeredCount = Object.keys(userAnswers).length;
+            const total = currentQuestionsList.length;
+            document.getElementById("sidebar-counter").innerText = `${answeredCount}/${total}`;
+        }
+
+        // Load specific question details
+        function loadQuestion(index) {
+            currentQuestionIndex = index;
+            const q = currentQuestionsList[index];
+
+            // Render Header and Text
+            const originalNum = q.question_num;
+            document.getElementById("question-header").innerText = `Câu hỏi ${index + 1} (Số gốc: ${originalNum})`;
+            
+            // Clean original question formatting if starts with "Câu X:" or "X."
+            let qText = q.question;
+            qText = qText.replace(/^Câu\s+\d+:/i, '').replace(/^\d+\./, '').trim();
+            document.getElementById("question-text").innerText = qText;
+
+            // Render Image
+            const imgBox = document.getElementById("q-image-box");
+            const imgEl = document.getElementById("question-image");
+            if (q.images && q.images.length > 0) {
+                imgBox.style.display = "flex";
+                imgEl.src = q.images[0];
+            } else {
+                imgBox.style.display = "none";
+                imgEl.src = "";
+            }
+
+            // Render Options
+            const optionsContainer = document.getElementById("options-container");
+            optionsContainer.innerHTML = "";
+
+            q.options.forEach((opt, optIdx) => {
+                const optionCard = document.createElement("div");
+                optionCard.className = "option-card";
+                optionCard.id = `opt-card-${optIdx}`;
+
+                // Clean options text prefix (like A., B., A), B)...)
+                let optText = opt.text;
+                optText = optText.replace(/^[A-H]\s*[\)\.\-\:]\s*/i, '').trim();
+
+                const letter = String.fromCharCode(65 + optIdx);
+                let innerHtml = `
+                    <div class="option-prefix">${letter}</div>
+                    <div class="option-content">
+                        <span>${optText}</span>
+                `;
+
+                if (opt.images && opt.images.length > 0) {
+                    innerHtml += `<img class="option-image" src="${opt.images[0]}" alt="Option ${letter}">`;
+                }
+
+                innerHtml += `
+                    </div>
+                    <i class="fa-solid fa-circle-check option-status-icon" style="color: var(--correct-color);"></i>
+                `;
+
+                optionCard.innerHTML = innerHtml;
+
+                // Add selection listener
+                optionCard.onclick = () => selectOption(optIdx);
+
+                optionsContainer.appendChild(optionCard);
+            });
+
+            // Adjust navigation buttons state
+            document.getElementById("prev-btn").disabled = (index === 0);
+            
+            const nextBtn = document.getElementById("next-btn");
+            const submitBtn = document.getElementById("submit-early-btn");
+
+            if (index === currentQuestionsList.length - 1) {
+                nextBtn.style.display = "none";
+                submitBtn.style.display = "flex";
+            } else {
+                nextBtn.style.display = "flex";
+                submitBtn.style.display = "none";
+            }
+
+            // Highlighting active button in sidebar
+            document.querySelectorAll(".nav-num").forEach(btn => btn.classList.remove("active"));
+            const activeNav = document.getElementById(`nav-num-${index}`);
+            if (activeNav) activeNav.classList.add("active");
+
+            // If question is already answered, restore options state
+            if (userAnswers[index] !== undefined) {
+                restoreAnsweredState(index);
+            }
+
+            // Update Progress Bar
+            updateProgressBar();
+        }
+
+        // Selection of option with instant visual feedback
+        function selectOption(selectedIdx) {
+            // Prevent double-answering
+            if (userAnswers[currentQuestionIndex] !== undefined) return;
+
+            const q = currentQuestionsList[currentQuestionIndex];
+            const isCorrect = q.options[selectedIdx].is_correct;
+
+            userAnswers[currentQuestionIndex] = {
+                selectedIndex: selectedIdx,
+                isCorrect: isCorrect
+            };
+
+            // Instant visual feedback!
+            applyVisualFeedback(selectedIdx, isCorrect);
+
+            // Update sidebar button state
+            const navBtn = document.getElementById(`nav-num-${currentQuestionIndex}`);
+            if (navBtn) {
+                navBtn.classList.add(isCorrect ? "answered-correct" : "answered-incorrect");
+            }
+
+            updateSidebarCounter();
+            updateScoreCounter();
+            updateProgressBar();
+        }
+
+        // Apply feedback classes to option cards
+        function applyVisualFeedback(selectedIdx, isCorrect) {
+            const q = currentQuestionsList[currentQuestionIndex];
+            
+            q.options.forEach((opt, idx) => {
+                const card = document.getElementById(`opt-card-${idx}`);
+                if (!card) return;
+
+                // Disable all cards
+                card.classList.add("disabled");
+
+                // Highlight selected
+                if (idx === selectedIdx) {
+                    if (isCorrect) {
+                        card.classList.add("correct");
+                        const icon = card.querySelector(".option-status-icon");
+                        icon.className = "fa-solid fa-circle-check option-status-icon";
+                    } else {
+                        card.classList.add("incorrect");
+                        const icon = card.querySelector(".option-status-icon");
+                        icon.className = "fa-solid fa-circle-xmark option-status-icon";
+                    }
+                }
+
+                // Show correct option anyway
+                if (opt.is_correct) {
+                    card.classList.add("correct");
+                    const icon = card.querySelector(".option-status-icon");
+                    icon.className = "fa-solid fa-circle-check option-status-icon";
+                    card.classList.remove("disabled"); // keep highlighted
+                }
+            });
+        }
+
+        // Restore visual state if question was already answered
+        function restoreAnsweredState(index) {
+            const answer = userAnswers[index];
+            applyVisualFeedback(answer.selectedIndex, answer.isCorrect);
+        }
+
+        // Update progress bar width and text
+        function updateProgressBar() {
+            const total = currentQuestionsList.length;
+            const progressPercent = ((currentQuestionIndex + 1) / total) * 100;
+            document.getElementById("progress-bar").style.width = `${progressPercent}%`;
+            document.getElementById("quiz-progress-text").innerText = `Câu ${currentQuestionIndex + 1}/${total}`;
+        }
+
+        // Update score tracker at progress bar area
+        function updateScoreCounter() {
+            let correct = 0;
+            let incorrect = 0;
+            Object.values(userAnswers).forEach(ans => {
+                if (ans.isCorrect) correct++;
+                else incorrect++;
+            });
+            document.getElementById("score-counter").innerText = `Đúng: ${correct} | Sai: ${incorrect}`;
+        }
+
+        function prevQuestion() {
+            if (currentQuestionIndex > 0) {
+                loadQuestion(currentQuestionIndex - 1);
+            }
+        }
+
+        function nextQuestion() {
+            if (currentQuestionIndex < currentQuestionsList.length - 1) {
+                loadQuestion(currentQuestionIndex + 1);
+            }
+        }
+
+        function saveActiveState() {
+            // Placeholder if needed for active states
+        }
+
+        // End Quiz Session & show results
+        function finishQuiz() {
+            // Verify if all questions are answered
+            const answeredCount = Object.keys(userAnswers).length;
+            const total = currentQuestionsList.length;
+            
+            if (answeredCount < total) {
+                const confirmed = confirm(`Bạn mới trả lời ${answeredCount}/${total} câu hỏi. Bạn có chắc chắn muốn nộp bài?`);
+                if (!confirmed) return;
+            }
+
+            // Stop timer
+            clearInterval(timerInterval);
+
+            // Compute statistics
+            let score = 0;
+            currentQuestionsList.forEach((_, idx) => {
+                if (userAnswers[idx] && userAnswers[idx].isCorrect) {
+                    score++;
+                }
+            });
+
+            const accuracy = Math.round((score / total) * 100);
+            const isPassed = accuracy >= 50;
+
+            // Save highscore
+            saveHighscore(score);
+
+            // Populate Results Dashboard
+            document.getElementById("accuracy-percent").innerText = `${accuracy}%`;
+            document.getElementById("stat-score").innerText = `${score}/${total}`;
+            
+            // Set circle progress offset
+            const fillEl = document.getElementById("result-circle-fill");
+            const circumference = 440; // 2 * pi * r (r=70)
+            const offset = circumference - (accuracy / 100) * circumference;
+            fillEl.style.strokeDashoffset = offset;
+
+            // Format time
+            const mins = Math.floor(secondsElapsed / 60).toString().padStart(2, '0');
+            const secs = (secondsElapsed % 60).toString().padStart(2, '0');
+            document.getElementById("stat-time").innerText = `${mins}:${secs}`;
+
+            // Set rank/status text
+            const statusEl = document.getElementById("stat-status");
+            const headlineEl = document.getElementById("result-headline");
+            const feedbackEl = document.getElementById("feedback-msg");
+
+            if (isPassed) {
+                statusEl.innerText = "ĐẠT";
+                statusEl.style.color = "var(--correct-color)";
+                headlineEl.innerText = "Chúc Mừng! Bạn Đã Vượt Qua";
+                feedbackEl.innerText = accuracy === 100 ? "Tuyệt đối! Điểm số hoàn hảo 100%!" : "Kế hoạch ôn luyện hiệu quả, bạn đã đạt mục tiêu.";
+            } else {
+                statusEl.innerText = "CHƯA ĐẠT";
+                statusEl.style.color = "var(--incorrect-color)";
+                headlineEl.innerText = "Hãy Thử Lại Lần Nữa";
+                feedbackEl.innerText = "Bạn cần tích lũy thêm kiến thức để đạt tỉ lệ tối thiểu 50%.";
+            }
+
+            // Build Review breakdown list
+            buildReviewList();
+
+            // Switch to Results
+            switchView("view-results");
+        }
+
+        // Save highscore to local storage
+        function saveHighscore(score) {
+            if (currentQuizSet === "random") {
+                const currentHS = parseInt(localStorage.getItem("highscore_set_random") || "0");
+                if (score > currentHS) {
+                    localStorage.setItem("highscore_set_random", score);
+                }
+            } else if (currentQuizSet === "all") {
+                const currentHS = parseInt(localStorage.getItem("highscore_set_all") || "0");
+                if (score > currentHS) {
+                    localStorage.setItem("highscore_set_all", score);
+                }
+            } else {
+                const currentHS = parseInt(localStorage.getItem(`highscore_set_${currentQuizSet}`) || "0");
+                if (score > currentHS) {
+                    localStorage.setItem(`highscore_set_${currentQuizSet}`, score);
+                }
+            }
+            initLandingPage(); // reload lander stats
+        }
+
+        // Build review questions structure
+        function buildReviewList() {
+            const container = document.getElementById("review-list-container");
+            container.innerHTML = "";
+
+            currentQuestionsList.forEach((q, idx) => {
+                const answer = userAnswers[idx];
+                const userChoice = answer ? answer.selectedIndex : -1;
+                const isCorrect = answer ? answer.isCorrect : false;
+
+                const qCard = document.createElement("div");
+                qCard.className = "review-q-card";
+
+                let headerHtml = `<div class="review-q-header">`;
+                if (userChoice === -1) {
+                    headerHtml += `<span style="color: var(--text-secondary);"><i class="fa-solid fa-minus"></i> Bỏ qua</span>`;
+                } else if (isCorrect) {
+                    headerHtml += `<span style="color: var(--correct-color);"><i class="fa-solid fa-circle-check"></i> Đúng</span>`;
+                } else {
+                    headerHtml += `<span style="color: var(--incorrect-color);"><i class="fa-solid fa-circle-xmark"></i> Sai</span>`;
+                }
+                
+                let qText = q.question.replace(/^Câu\s+\d+:/i, '').replace(/^\d+\./, '').trim();
+                headerHtml += ` | Câu ${idx + 1}: ${qText}</div>`;
+
+                let innerHtml = headerHtml;
+
+                // Add image if any
+                if (q.images && q.images.length > 0) {
+                    innerHtml += `
+                        <div class="question-image-container" style="display: flex; justify-content: flex-start; max-height: 200px; margin-bottom:16px;">
+                            <img src="${q.images[0]}" alt="Question Image" style="max-height: 160px; object-fit: contain;">
+                        </div>
+                    `;
+                }
+
+                // Add option cards
+                innerHtml += `<div class="review-opt-list">`;
+                q.options.forEach((opt, optIdx) => {
+                    const letter = String.fromCharCode(65 + optIdx);
+                    let optStyle = "background: rgba(15, 23, 42, 0.1);";
+                    let optIcon = "";
+
+                    if (opt.is_correct) {
+                        optStyle = "background: var(--correct-bg); border-color: var(--correct-border); color: var(--correct-color); font-weight: 600;";
+                        optIcon = `<i class="fa-solid fa-circle-check"></i>`;
+                    } else if (optIdx === userChoice) {
+                        optStyle = "background: var(--incorrect-bg); border-color: var(--incorrect-border); color: var(--incorrect-color);";
+                        optIcon = `<i class="fa-solid fa-circle-xmark"></i>`;
+                    }
+
+                    // Clean options text prefix
+                    let optText = opt.text.replace(/^[A-H]\s*[\)\.\-\:]\s*/i, '').trim();
+
+                    innerHtml += `
+                        <div class="review-opt" style="${optStyle}">
+                            <div class="option-prefix" style="width:24px; height:24px; font-size:12px;">${letter}</div>
+                            <div style="flex:1;">
+                                <span>${optText}</span>
+                    `;
+
+                    if (opt.images && opt.images.length > 0) {
+                        innerHtml += `<img class="option-image" src="${opt.images[0]}" alt="Option ${letter}" style="max-height: 80px; margin-top: 4px;">`;
+                    }
+
+                    innerHtml += `
+                            </div>
+                            ${optIcon}
+                        </div>
+                    `;
+                });
+                innerHtml += `</div>`;
+
+                qCard.innerHTML = innerHtml;
+                container.appendChild(qCard);
+            });
+        }
+
+        // View management helper
+        function switchView(viewId) {
+            document.querySelectorAll(".view").forEach(view => {
+                view.classList.remove("active");
+            });
+            document.getElementById(viewId).classList.add("active");
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Reset and start current set again
+        function restartQuiz() {
+            startQuiz(currentQuizSet);
+        }
+
+        function goToHome() {
+            clearInterval(timerInterval);
+            switchView("view-landing");
+        }
+
+        function confirmExit() {
+            const confirmed = confirm("Bạn có chắc chắn muốn thoát về Trang chủ? Tiến trình làm bài sẽ không được lưu.");
+            if (confirmed) {
+                goToHome();
+            }
+        }
+    </script>
+</body>
+</html>
