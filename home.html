@@ -921,6 +921,7 @@
             right: 16px;
             width: 40px;
             height: 40px;
+            display: none;
             border-radius: 50%;
             border: 1px solid var(--card-border);
             background: rgba(255, 255, 255, 0.06);
@@ -1303,6 +1304,7 @@
                     </div>
                 </a>
             </div>
+            <button class="intro-modal-ack" type="button" onclick="closeIntroModal()">Đã đọc</button>
         </div>
     </div>
 
@@ -1348,18 +1350,6 @@
                 overlay.setAttribute("aria-hidden", "false");
                 document.body.classList.add("modal-open");
             };
-
-            overlay.addEventListener("click", (event) => {
-                if (event.target === overlay) {
-                    closeIntroModal();
-                }
-            });
-
-            document.addEventListener("keydown", function handleIntroEsc(event) {
-                if (event.key === "Escape" && overlay.classList.contains("show")) {
-                    closeIntroModal();
-                }
-            });
 
             window.closeIntroModal = closeIntroModal;
 
